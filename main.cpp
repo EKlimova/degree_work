@@ -51,56 +51,103 @@ int main(int argc, char *argv[]) {
   }
 
   while (!fin.eof()) {
-    char byte;
-    fin.read(&byte, 1); // считывает 1 байт
-    if (fin.eof()) // если достигнут конец файла
-      break; // выход из цикла
-    else
-      fin.seekg(-1, fin.cur); // иначе возвращаемся на 1 байт назад
+	  char byte;
+	  fin.read(&byte, 1); // считывает 1 байт
+	  if (fin.eof()) // если достигнут конец файла
+		  break; // выход из цикла
+	  else
+		  fin.seekg(-1, fin.cur); // иначе возвращаемся на 1 байт назад
 
-	// считываем тег группы
+		// считываем тег группы
 
-    // считываем Group Number
-    tag_number tag_group; 
-    fin.read(reinterpret_cast<char *>(&tag_group.num), sizeof(tag_number)); // считываем 2 байта
+		// считываем Group Number
+	  tag_number tag_group;
+	  fin.read(reinterpret_cast<char *>(&tag_group.num), sizeof(tag_number)); // считываем 2 байта
 
-    // считываем Element Number
-    tag_number tag_element;
-    fin.read(reinterpret_cast<char *>(&tag_element.num), sizeof(tag_number)); // считываем 2 байта
+	  // считываем Element Number
+	  tag_number tag_element;
+	  fin.read(reinterpret_cast<char *>(&tag_element.num), sizeof(tag_number)); // считываем 2 байта
 
-    cout << "Tag is (" << hex << setfill('0') << setw(4) << tag_group.num << ","
-         << hex << setfill('0') << setw(4) << tag_element.num << ")"
-         << "\n"; //вывод на экран тега
+	  //cout << "Tag is (" << hex << setfill('0') << setw(4) << tag_group.num << ","
+		 // << hex << setfill('0') << setw(4) << tag_element.num << ")"
+		 // << "\n"; //вывод на экран тега
 
-    // проверка VR
-    char vr[3]; // создаем массив для VR
-    fin.read(vr, 2); // считываем 2 байта
-    vr[2] = '\0'; // задаем последний элемент массива
-    string vr_read(vr);
-    const vector<string> vrs{"OB", "OW", "OF", "SQ", "UT", "OR", "UN"};
-    value_field32 length32;
-    value_field16 length16;
-    int length;
-// проверка git
-    for (auto s : vrs) {
-      if (s == vr_read) { // если vr принадлежить множеству vrs
-        fin.seekg(2, fin.cur); // пропускаем 2 байта
-        // считываем Value Length
-        fin.read(reinterpret_cast<char *>(&length32.num), 4); // считываем 4 байта
-        length = length32.num; // присваиваем считанные байты длине length
-        break;
-      } else if (s == vrs.back()) { // если vr не принадлежит vrs
-        fin.read(reinterpret_cast<char *>(&length16.num), 2); // считываем 2 байта
-        length = length16.num; // присваиваем считанные байты длине length
-      }
-    }
+	  
+	  // пытаюсь поменять тип у номера группы и номера элемента, чтоб можно было их стравнить со строкой
+	  reinterpret_cast<string *>(&tag_group.num);
+	  reinterpret_cast<string *>(&tag_element.num);
+	  
 
-    char *s = new char[length + 1]; // создаем динамический массив значений
-    s[length] = '\0'; // задаем последний элемент массива
-    fin.read(s, length); // считываем значение
-    string str(s);
-    cout << "Value is: " << dec << str << "\n"; // выводим значение на экран
-    delete[] s;                                 // удаляем массив
+
+	 // считываем Bit Alocated
+	  if ((tag_group.num = '0028') && (tag_element.num = '0100')) {  // не может тип tag_number сравниваться со строкой!
+		  char *value = new char[2];
+		  fin.read(value, 2); // считываем значение Bit Alocated, состоящее из 2 байт
+		  reinterpret_cast<unsigned short *>(&value); // переводим value из типа char  в тип unsigned short
+		  cout << "(" << hex << setfill('0') << setw(4) << tag_group.num << ","
+			  << hex << setfill('0') << setw(4) << tag_element.num << ")"
+			  << " "; //вывод на экран тега
+		  cout << "Bit Alocated is: " << dec << value << "\n"; // выводим на экран значение Bit Alocated
+		  delete[] value;
+	  }
+
+	  // считываем Bit Stored
+	  if ((tag_group.num = '0028') && (tag_element.num = '0101')) {  // не может тип tag_number сравниваться со строкой!
+		  char *value = new char[2];
+		  fin.read(value, 2); // считываем значение Bit Alocated, состоящее из 2 байт
+		  reinterpret_cast<unsigned short *>(&value); // переводим value из типа char  в тип unsigned short
+		  cout << "(" << hex << setfill('0') << setw(4) << tag_group.num << ","
+			  << hex << setfill('0') << setw(4) << tag_element.num << ")"
+			  << " "; //вывод на экран тега
+		  cout << "Bit Stored is: " << dec << value << "\n"; // выводим на экран Bit Alocated
+		  delete[] value;
+	  }
+
+	  // считываем Hight Bit
+	  if ((tag_group.num = '0028') && (tag_element.num = '0102')) {  // не может тип tag_number сравниваться со строкой!
+		  char *value = new char[2];
+		  fin.read(value, 2); // считываем значение Bit Alocated, состоящее из 2 байт
+		  reinterpret_cast<unsigned short *>(&value); // переводим value из типа char  в тип unsigned short
+		  cout << "(" << hex << setfill('0') << setw(4) << tag_group.num << ","
+			  << hex << setfill('0') << setw(4) << tag_element.num << ")"
+			  << " "; //вывод на экран тега
+		  cout << "Hight Bit is: " << dec << value << "\n"; // выводим на экран Bit Alocated
+		  delete[] value;
+	  }
+
+
+
+
+
+    //// проверка VR
+    //char vr[3]; // создаем массив для VR
+    //fin.read(vr, 2); // считываем 2 байта
+    //vr[2] = '\0'; // задаем последний элемент массива
+    //string vr_read(vr);
+    //const vector<string> vrs{"OB", "OW", "OF", "SQ", "UT", "OR", "UN"};
+    //value_field32 length32;
+    //value_field16 length16;
+    //int length;
+
+    //for (auto s : vrs) {
+    //  if (s == vr_read) { // если vr принадлежить множеству vrs
+    //    fin.seekg(2, fin.cur); // пропускаем 2 байта
+    //    // считываем Value Length
+    //    fin.read(reinterpret_cast<char *>(&length32.num), 4); // считываем 4 байта
+    //    length = length32.num; // присваиваем считанные байты длине length
+    //    break;  
+    //  } else if (s == vrs.back()) { // если vr не принадлежит vrs
+    //    fin.read(reinterpret_cast<char *>(&length16.num), 2); // считываем 2 байта
+    //    length = length16.num; // присваиваем считанные байты длине length
+    //  }
+    //}
+
+    //char *s = new char[length + 1]; // создаем динамический массив значений
+    //s[length] = '\0'; // задаем последний элемент массива
+    //fin.read(s, length); // считываем значение
+    //string str(s);
+    //cout << "Value is: " << dec << str << "\n"; // выводим значение на экран
+    //delete[] s;                                 // удаляем массив
 
   }
   fin.close(); // выход из потока
