@@ -73,17 +73,14 @@ int main(int argc, char *argv[]) {
 		 // << "\n"; //вывод на экран тега
 
 	  
-	  // пытаюсь поменять тип у номера группы и номера элемента, чтоб можно было их стравнить со строкой
-	  reinterpret_cast<string *>(&tag_group.num);
-	  reinterpret_cast<string *>(&tag_element.num);
+	  
 	  
 
 
 	 // считываем Bit Alocated
-	  if ((tag_group.num = '0028') && (tag_element.num = '0100')) {  // не может тип tag_number сравниваться со строкой!
+	  if ((tag_group.num == 0x0028) && (tag_element.num == 0x0100)) {  // не может тип tag_number сравниваться со строкой!
 		  char *value = new char[2];
 		  fin.read(value, 2); // считываем значение Bit Alocated, состоящее из 2 байт
-		  reinterpret_cast<unsigned short *>(&value); // переводим value из типа char  в тип unsigned short
 		  cout << "(" << hex << setfill('0') << setw(4) << tag_group.num << ","
 			  << hex << setfill('0') << setw(4) << tag_element.num << ")"
 			  << " "; //вывод на экран тега
