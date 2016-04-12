@@ -70,32 +70,27 @@ int main(int argc, char *argv[]) {
 
 	  value_field32 length32;
 	  //считываем Pixel Data
-	  if ((tag_group.num == 0x7FE0) && (tag_element.num == 0x0010)) {  
+	  if ((tag_group.num == 0x7FE0) && (tag_element.num == 0x0010)) {
 		  fin.seekg(4, fin.cur);										//пропускаем vr и зарезервированное поле
 		  fin.read(reinterpret_cast<char *>(&length32.num), 4);			//считали значение длины
-		  int f = (length32.num)/2;										//количество слов, которые будут считываться из pixel data
 		  ofstream fout("pixel_data.raw");								//создаем объект и файл для записи
-		  while (f!=0) {												//пока не считаем все слова
-			  string bytes;
-			  fin.read(reinterpret_cast<char *>(&bytes), 2);			//считываем одно слово
-			  fout << bytes;											//записываем это слово в файл
+		  if (!fout) {
+			  cout << "File error";										//выводим сообщение об ошибке, если файл не открылся
+			  return 1;
 		  }
-		   fout.close();												//закрываем файл
+		  char *pixel_data = new char[length32.num + 1];
+		  pixel_data[length32.num] = '\0';
+		  fin.read(pixel_data, length32.num);
+		  fout.write(pixel_data, length32.num);
+		  delete[] pixel_data;
+		  
+		  fout.close();												//закрываем файл
 	  }
 
 
 	  cout << "Tag is (" << hex << setfill('0') << setw(4) << tag_group.num << ","
 		  << hex << setfill('0') << setw(4) << tag_element.num << ")"
 		  << "\n"; //вывод на экран тега
-
-	  
-	  
-	  
-
-
-	
-
-
 
     // проверка VR
     char vr[3]; // создаем массив для VR
