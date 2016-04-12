@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
 	  if ((tag_group.num == 0x7FE0) && (tag_element.num == 0x0010)) {
 		  fin.seekg(4, fin.cur);										//пропускаем vr и зарезервированное поле
 		  fin.read(reinterpret_cast<char *>(&length32.num), 4);			//считали значение длины
-		  ofstream fout("pixel_data.raw");								//создаем объект и файл для записи
+		  ofstream fout("pixel_data.raw",ios_base::binary);								//создаем объект и файл для записи
 		  if (!fout) {
 			  cout << "File error";										//выводим сообщение об ошибке, если файл не открылся
 			  return 1;
