@@ -68,26 +68,7 @@ int main(int argc, char *argv[]) {
 	  tag_number tag_element;
 	  fin.read(reinterpret_cast<char *>(&tag_element.num), sizeof(tag_number)); // считываем 2 байта
 
-	  value_field32 length32;
-	  //считываем Pixel Data
-	  if ((tag_group.num == 0x7FE0) && (tag_element.num == 0x0010)) {
-		  fin.seekg(4, fin.cur);										//пропускаем vr и зарезервированное поле
-		  fin.read(reinterpret_cast<char *>(&length32.num), 4);			//считали значение длины
-		  ofstream fout("pixel_data.raw",ios_base::binary);								//создаем объект и файл для записи
-		  if (!fout) {
-			  cout << "File error";										//выводим сообщение об ошибке, если файл не открылся
-			  return 1;
-		  }
-		  char *pixel_data = new char[length32.num + 1];
-		  pixel_data[length32.num] = '\0';
-		  fin.read(pixel_data, length32.num);
-		  fout.write(pixel_data, length32.num);
-		  delete[] pixel_data;
-		  
-		  fout.close();												//закрываем файл
-	  }
-
-	 //эксперименты
+	 
 	  cout << "Tag is (" << hex << setfill('0') << setw(4) << tag_group.num << ","
 		  << hex << setfill('0') << setw(4) << tag_element.num << ")"
 		  << "\n"; //вывод на экран тега
@@ -99,9 +80,10 @@ int main(int argc, char *argv[]) {
     string vr_read(vr);
     const vector<string> vrs{"OB", "OW", "OF", "SQ", "UT", "OR", "UN"};
     value_field16 length16;
+	value_field32 length32;
     int length;
 
-    for (auto s : vrs) {
+	for (auto s : vrs) {
       if (s == vr_read) { // если vr принадлежить множеству vrs
         fin.seekg(2, fin.cur); // пропускаем 2 байта
         // считываем Value Length
@@ -114,13 +96,30 @@ int main(int argc, char *argv[]) {
       }
     }
 
+	
     char *s = new char[length + 1]; // создаем динамический массив значений
     s[length] = '\0'; // задаем последний элемент массива
     fin.read(s, length); // считываем значение
     string str(s);
     cout << "Value is: " << dec << str << "\n"; // выводим значение на экран
     delete[] s;                                 // удаляем массив
+	
+	//считываем Pixel Data
+	if ((tag_group.num == 0x7FE0) && (tag_element.num == 0x0010)) {
+		fin.seekg(-524284, fin.cur);										//пропускаем vr и зарезервированное поле
+		fin.read(reinterpret_cast<char *>(&length32.num), 4);			//считали значение длины
+		ofstream fout("pixel_data.raw", ios_base::binary);								//создаем объект и файл для записи
+		if (!fout) {
+			cout << "File error";										//выводим сообщение об ошибке, если файл не открылся
+			return 1;
+		}
+		char *pixel_data = new char[length32.num];
+		fin.read(pixel_data, length32.num);
+		fout.write(pixel_data, length32.num);
+		delete[] pixel_data;
 
+		fout.close();												//закрываем файл
+	}
   }
   fin.close(); // выход из потока
   _getch();
