@@ -87,7 +87,7 @@ int main(int argc, char *argv[]) {
 		  fout.close();												//закрываем файл
 	  }
 
-
+	 //эксперименты
 	  cout << "Tag is (" << hex << setfill('0') << setw(4) << tag_group.num << ","
 		  << hex << setfill('0') << setw(4) << tag_element.num << ")"
 		  << "\n"; //вывод на экран тега
