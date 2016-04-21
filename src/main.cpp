@@ -106,17 +106,15 @@ int main(int argc, char *argv[]) {
 	
 	//считываем Pixel Data
 	if ((tag_group.num == 0x7FE0) && (tag_element.num == 0x0010)) {
-		fin.seekg(-524284, fin.cur);										//пропускаем vr и зарезервированное поле
-		fin.read(reinterpret_cast<char *>(&length32.num), 4);			//считали значение длины
+		fin.seekg(-524288, fin.cur);										//пропускаем vr и зарезервированное поле
 		ofstream fout("pixel_data.raw", ios_base::binary);								//создаем объект и файл для записи
 		if (!fout) {
 			cout << "File error";										//выводим сообщение об ошибке, если файл не открылся
 			return 1;
 		}
-		char *pixel_data = new char[length32.num];
-		fin.read(pixel_data, length32.num);
-		fout.write(pixel_data, length32.num);
-		delete[] pixel_data;
+		char pixel_data [524288];
+		fin.read(pixel_data, 524288);
+		fout.write(pixel_data, 524288);
 
 		fout.close();												//закрываем файл
 	}
