@@ -112,10 +112,14 @@ int main(int argc, char *argv[]) {
 			cout << "File error";										//выводим сообщение об ошибке, если файл не открылся
 			return 1;
 		}
-		char pixel_data [524288];
-		fin.read(pixel_data, 524288);
-		fout.write(pixel_data, 524288);
-
+		short pixel_data [511][511]; // задаем двумерный массив пикселей 512 на 512
+		short pixel; // задаем один пиксель, который соержит в себе 2 байта
+		for (int i = 0; i < 512; i++) {
+			for (int j = 0; j < 512; j++) {
+				fin.read(reinterpret_cast<char *>(&pixel), 2); //считываем 2 байта из томограммы в pixel
+				fout.write(reinterpret_cast<char *>(&pixel), 2); // записываем 2 байта из pixel в текстовый документ
+			}
+		}
 		fout.close();												//закрываем файл
 	}
   }
