@@ -327,6 +327,45 @@ int main(int argc, char *argv[]) {
 						return 2;								// не совпала с данными из файла
 					}
 				}
+				while (!fin.eof()) {
+					char byte;
+					fin.read(&byte, 1); // считывает 1 байт
+					if (fin.eof()) // если достигнут конец файла
+						break; // выход из цикла
+					else
+						fin.seekg(-1, fin.cur); // иначе возвращаемся на 1 байт назад
+
+												// считываем тег группы
+												// считываем Group Number
+					tag_number tag_group;
+					fin.read(reinterpret_cast<char *>(&tag_group.num), sizeof(tag_number)); // считываем 2 байта
+
+																							// считываем Element Number
+					tag_number tag_element;
+					fin.read(reinterpret_cast<char *>(&tag_element.num), sizeof(tag_number)); // считываем 2 байта
+				//считываем Pixel Data
+				if ((tag_group.num == 0x7FE0) && (tag_element.num == 0x0010)) {
+					fin.seekg(-524288, fin.cur);										//пропускаем vr и зарезервированное поле
+					ofstream fout("pixel_data.raw", ios_base::binary);								//создаем объект и файл для записи
+					if (!fout) {
+						cout << "File error";										//выводим сообщение об ошибке, если файл не открылся
+						return 1;
+					}
+					short pixel_data[511][511]; // задаем двумерный массив пикселей 512 на 512
+					short pixel; // задаем один пиксель, который соержит в себе 2 байта
+					for (int i = 0; i < 512; i++) {
+						for (int j = 0; j < 512; j++) {
+							fin.read(reinterpret_cast<char *>(&pixel), 2); //считываем 2 байта из томограммы в pixel
+							fout.write(reinterpret_cast<char *>(&pixel), 2); // записываем 2 байта из pixel в текстовый документ
+						}
+					}
+					fout.close();//закрываем файл
+				}
+			}
+			fin.close(); // выход из потока
+			_getch();
+			return 0;
+
 
 			}
 		}
