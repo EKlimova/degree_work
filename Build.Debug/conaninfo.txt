@@ -1,0 +1,30 @@
+[settings]
+    arch=x86_64
+    build_type=Debug
+    compiler=Visual Studio
+    compiler.runtime=MD
+    compiler.version=14
+    os=Windows
+
+[requires]
+    Boost/1.Y.Z
+
+[options]
+
+
+[full_settings]
+    arch=x86_64
+    build_type=Debug
+    compiler=Visual Studio
+    compiler.runtime=MD
+    compiler.version=14
+    os=Windows
+
+[full_requires]
+    Boost/1.60.0@lasote/stable:03f31fa9b1616cb81000160b69c7966f578c4de1
+    zlib/1.2.8@lasote/stable:43c336bf99095e4349ebf544d29ccaeba01e4615
+
+[full_options]
+    Boost:header_only=False
+    Boost:shared=True
+    zlib:shared=True
