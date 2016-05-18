@@ -1,3 +1,0 @@
-E:/dev/my/degree_work/Build.Debug/CMakeFiles/dcmtk_test.dir
-E:/dev/my/degree_work/Build.Debug/CMakeFiles/ALL_BUILD.dir
-E:/dev/my/degree_work/Build.Debug/CMakeFiles/ZERO_CHECK.dir
