@@ -29,7 +29,7 @@ union value_field32 { // структура длины на 4 байта
 
 int main(int argc, char *argv[]) {
 
-
+	//
 	for (fs::recursive_directory_iterator it("E:/CT/ct-27.08.2015/ct-27.08.2015/DICOM/PA000000/ST000000/SE000000"), end; it != end; ++it) { // пробегаем циклом по всем файлам в папке
 		if (it->path().extension() == ".dcm") { // отбираем только файлы с расширением dcm
 			if (it->path().filename() == "IM000000.dcm") { // выбираем первый файл
@@ -285,26 +285,24 @@ int main(int argc, char *argv[]) {
 
 					//считываем Pixel Data
 					if ((tag_group.num == 0x7FE0) && (tag_element.num == 0x0010)) {
-						fin.seekg(-524288, fin.cur);										//пропускаем vr и зарезервированное поле
 						ofstream fout("pixel_data.raw", ios_base::binary);								//создаем объект и файл дл€ записи
 						if (!fout) {
 							cout << "File error";										//выводим сообщение об ошибке, если файл не открылс€
 							return 1;
 						}
+						fin.seekg(8, fin.cur); // пропускаем vr, зарезервированное поле и длину
 						short pixel_data[511][511]; // задаем двумерный массив пикселей 512 на 512
-						short pixel; // задаем один пиксель, который соержит в себе 2 байта
 						for (int i = 0; i < 512; i++) {
 							for (int j = 0; j < 512; j++) {
-								fin.read(reinterpret_cast<char *>(&pixel), 2); //считываем 2 байта из томограммы в pixel
-								fout.write(reinterpret_cast<char *>(&pixel), 2); // записываем 2 байта из pixel в текстовый документ
+								fin.read(reinterpret_cast<char *>(&pixel_data[i][j]), 2); //считываем 2 байта из томограммы в pixel
+								fout.write(reinterpret_cast<char *>(&pixel_data[i][j]), 2); // записываем 2 байта из pixel в текстовый документ
 							}
 						}
 						fout.close();//закрываем файл
 					}
 				}
 				fin.close(); // выход из потока
-				_getch();
-				return 0;
+				
 			}
 			else {
 				ifstream fin(
@@ -345,29 +343,27 @@ int main(int argc, char *argv[]) {
 					fin.read(reinterpret_cast<char *>(&tag_element.num), sizeof(tag_number)); // считываем 2 байта
 				//считываем Pixel Data
 				if ((tag_group.num == 0x7FE0) && (tag_element.num == 0x0010)) {
-					fin.seekg(-524288, fin.cur);										//пропускаем vr и зарезервированное поле
 					ofstream fout("pixel_data.raw", ios_base::binary);								//создаем объект и файл дл€ записи
 					if (!fout) {
 						cout << "File error";										//выводим сообщение об ошибке, если файл не открылс€
 						return 1;
 					}
+					fin.seekg(8, fin.cur); // пропускаем vr, зарезервированное поле и длину
 					short pixel_data[511][511]; // задаем двумерный массив пикселей 512 на 512
-					short pixel; // задаем один пиксель, который соержит в себе 2 байта
 					for (int i = 0; i < 512; i++) {
 						for (int j = 0; j < 512; j++) {
-							fin.read(reinterpret_cast<char *>(&pixel), 2); //считываем 2 байта из томограммы в pixel
-							fout.write(reinterpret_cast<char *>(&pixel), 2); // записываем 2 байта из pixel в текстовый документ
+							fin.read(reinterpret_cast<char *>(&pixel_data[i][j]), 2); //считываем 2 байта из томограммы в pixel_data
+							fout.write(reinterpret_cast<char *>(&pixel_data[i][j]), 2); // записываем 2 байта из pixel_data в текстовый документ
 						}
 					}
 					fout.close();//закрываем файл
 				}
 			}
 			fin.close(); // выход из потока
-			_getch();
-			return 0;
-
-
+			
 			}
 		}
 	}
+	_getch();
+	return 0;
 }
