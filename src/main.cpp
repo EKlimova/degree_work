@@ -29,13 +29,13 @@ union value_field32 { // структура длины на 4 байта
 
 int main(int argc, char *argv[]) {
 
-	//
-	for (fs::recursive_directory_iterator it("E:/CT/ct-27.08.2015/ct-27.08.2015/DICOM/PA000000/ST000000/SE000000"), end; it != end; ++it) { // пробегаем циклом по всем файлам в папке
-		if (it->path().extension() == ".dcm") { // отбираем только файлы с расширением dcm
-			if (it->path().filename() == "IM000000.dcm") { // выбираем первый файл
+	bool first_file = true;
 
+	for (fs::recursive_directory_iterator it(argv[1]), end; it != end; ++it) { // пробегаем циклом по всем файлам в папке
+		if (first_file) { //если мы считываем первый файл
+		
 				ifstream fin(
-					argv[1],
+					argv[2],
 					ios_base::in |
 					ios_base::binary); //создаем объект и ассоциируем его с файлом
 
@@ -290,7 +290,16 @@ int main(int argc, char *argv[]) {
 							cout << "File error";										//выводим сообщение об ошибке, если файл не открылся
 							return 1;
 						}
-						fin.seekg(8, fin.cur); // пропускаем vr, зарезервированное поле и длину
+						fin.seekg(4, fin.cur); // пропускаем vr, зарезервированное поле
+						value_field32 length32;
+						fin.read(reinterpret_cast<char*>(&length32.num), 4); //считываем 4 байта - длину
+						int n = (length32.num) / (2*512); //задаем количество строк матрицы, двойка появилась из-за того, что одна ячейка - 2 байта
+						int m = (length32.num) / (2 * 512); // задаем количество столбцов матрицы
+						short **value; // указатель на массив указателей
+						value = new short *[n]; // выделение динамической памяти под массив указателей
+						for (int i = 0; i < n; i++) {
+							value[i] = new short[m]; //выделение динамической памяти для массива значений 
+						}
 						short pixel_data[511][511]; // задаем двумерный массив пикселей 512 на 512
 						for (int i = 0; i < 512; i++) {
 							for (int j = 0; j < 512; j++) {
@@ -302,68 +311,68 @@ int main(int argc, char *argv[]) {
 					}
 				}
 				fin.close(); // выход из потока
-				
+				first_file = false;
 			}
-			else {
-				ifstream fin(
-					argv[1],
-					ios_base::in |
-					ios_base::binary); //создаем объект и ассоциируем его с файлом
+			//else {
+			//	ifstream fin(
+			//		argv[1],
+			//		ios_base::in |
+			//		ios_base::binary); //создаем объект и ассоциируем его с файлом
 
-				if (!fin) {
-					cout << "File error"; //выводим сообщение об ошибке, если файл не открылся
-					return 1;
-				}
-				// проверка сигнатуры DICM
-				fin.seekg(128);                            //переходим на 129 байт
-				char ch;
-				const char dicm[4] = { 'D', 'I', 'C', 'M' }; //создаем массив с сигнатурой
-				for (int i = 0; i < 4; i++) {
-					fin >> ch;								 // побайтно считываем 4 элемента
-					if (ch != dicm[i]) {					// и сравниваем их с сигнатурой
-						cout << "Signature error";			// выводим сообщение об ошибке, если сигнатура
-						return 2;								// не совпала с данными из файла
-					}
-				}
-				while (!fin.eof()) {
-					char byte;
-					fin.read(&byte, 1); // считывает 1 байт
-					if (fin.eof()) // если достигнут конец файла
-						break; // выход из цикла
-					else
-						fin.seekg(-1, fin.cur); // иначе возвращаемся на 1 байт назад
+			//	if (!fin) {
+			//		cout << "File error"; //выводим сообщение об ошибке, если файл не открылся
+			//		return 1;
+			//	}
+			//	// проверка сигнатуры DICM
+			//	fin.seekg(128);                            //переходим на 129 байт
+			//	char ch;
+			//	const char dicm[4] = { 'D', 'I', 'C', 'M' }; //создаем массив с сигнатурой
+			//	for (int i = 0; i < 4; i++) {
+			//		fin >> ch;								 // побайтно считываем 4 элемента
+			//		if (ch != dicm[i]) {					// и сравниваем их с сигнатурой
+			//			cout << "Signature error";			// выводим сообщение об ошибке, если сигнатура
+			//			return 2;								// не совпала с данными из файла
+			//		}
+			//	}
+			//	while (!fin.eof()) {
+			//		char byte;
+			//		fin.read(&byte, 1); // считывает 1 байт
+			//		if (fin.eof()) // если достигнут конец файла
+			//			break; // выход из цикла
+			//		else
+			//			fin.seekg(-1, fin.cur); // иначе возвращаемся на 1 байт назад
 
-												// считываем тег группы
-												// считываем Group Number
-					tag_number tag_group;
-					fin.read(reinterpret_cast<char *>(&tag_group.num), sizeof(tag_number)); // считываем 2 байта
+			//									// считываем тег группы
+			//									// считываем Group Number
+			//		tag_number tag_group;
+			//		fin.read(reinterpret_cast<char *>(&tag_group.num), sizeof(tag_number)); // считываем 2 байта
 
-																							// считываем Element Number
-					tag_number tag_element;
-					fin.read(reinterpret_cast<char *>(&tag_element.num), sizeof(tag_number)); // считываем 2 байта
-				//считываем Pixel Data
-				if ((tag_group.num == 0x7FE0) && (tag_element.num == 0x0010)) {
-					ofstream fout("pixel_data.raw", ios_base::binary);								//создаем объект и файл для записи
-					if (!fout) {
-						cout << "File error";										//выводим сообщение об ошибке, если файл не открылся
-						return 1;
-					}
-					fin.seekg(8, fin.cur); // пропускаем vr, зарезервированное поле и длину
-					short pixel_data[511][511]; // задаем двумерный массив пикселей 512 на 512
-					for (int i = 0; i < 512; i++) {
-						for (int j = 0; j < 512; j++) {
-							fin.read(reinterpret_cast<char *>(&pixel_data[i][j]), 2); //считываем 2 байта из томограммы в pixel_data
-							fout.write(reinterpret_cast<char *>(&pixel_data[i][j]), 2); // записываем 2 байта из pixel_data в текстовый документ
-						}
-					}
-					fout.close();//закрываем файл
-				}
-			}
-			fin.close(); // выход из потока
-			
-			}
-		}
-	}
+			//																				// считываем Element Number
+			//		tag_number tag_element;
+			//		fin.read(reinterpret_cast<char *>(&tag_element.num), sizeof(tag_number)); // считываем 2 байта
+			//	//считываем Pixel Data
+			//	if ((tag_group.num == 0x7FE0) && (tag_element.num == 0x0010)) {
+			//		ofstream fout("pixel_data.raw", ios_base::binary);								//создаем объект и файл для записи
+			//		if (!fout) {
+			//			cout << "File error";										//выводим сообщение об ошибке, если файл не открылся
+			//			return 1;
+			//		}
+			//		fin.seekg(8, fin.cur); // пропускаем vr, зарезервированное поле и длину
+			//		short pixel_data[511][511]; // задаем двумерный массив пикселей 512 на 512
+			//		for (int i = 0; i < 512; i++) {
+			//			for (int j = 0; j < 512; j++) {
+			//				fin.read(reinterpret_cast<char *>(&pixel_data[i][j]), 2); //считываем 2 байта из томограммы в pixel_data
+			//				fout.write(reinterpret_cast<char *>(&pixel_data[i][j]), 2); // записываем 2 байта из pixel_data в текстовый документ
+			//			}
+			//		}
+			//		fout.close();//закрываем файл
+			//	}
+			//}
+			//fin.close(); // выход из потока
+			//
+			//}
+
+
 	_getch();
 	return 0;
 }
