@@ -93,7 +93,7 @@ int main(int argc, char *argv[]) {
 
 
 
-				if ((tag_group.num == 0x0020) && (tag_element.num == 0x0030)) { // находим Image Position
+				if ((tag_group.num == 0x0020) && (tag_element.num == 0x0032)) { // находим Image Position
 
 					cout << "(" << hex << setfill('0') << setw(4) << tag_group.num << ","
 						<< hex << setfill('0') << setw(4) << tag_element.num << ")"; //вывод на экран тега
@@ -309,7 +309,7 @@ int main(int argc, char *argv[]) {
 		}
 		else {
 			ifstream fin(
-				argv[2],
+				argv[3],
 				ios_base::in |
 				ios_base::binary); //создаем объект и ассоциируем его с файлом
 
