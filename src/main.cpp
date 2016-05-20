@@ -31,13 +31,13 @@ int main(int argc, char *argv[]) {
 
 	bool first_file = true;
 
-	for (fs::recursive_directory_iterator it(argv[1]), end; it != end; ++it) { // пробегаем циклом по всем файлам в папке
+	for (fs::recursive_directory_iterator it(argv[1]), end; it != end; ++it) { // пробегаем циклом по всем файлам в папке, путь передается как argv[1]
 		if (first_file) { //если мы считываем первый файл
 
 			ifstream fin(
 				argv[2],
 				ios_base::in |
-				ios_base::binary); //создаем объект и ассоциируем его с файлом
+				ios_base::binary); //создаем объект и ассоциируем его с первым файлом, который передается как argv[2]
 
 			if (!fin) {
 				cout << "File error"; //выводим сообщение об ошибке, если файл не открылся
