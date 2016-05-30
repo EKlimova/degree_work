@@ -6,7 +6,7 @@ project (dcmtk_test)
 include(${CMAKE_BINARY_DIR}/conanbuildinfo.cmake)
 conan_basic_setup()
 
-set(DCMTK_DIR "E:/dev/dcmtk/_install/cmake")
+set(DCMTK_DIR "E:/dev/dcmtk/_install_32/cmake")
 
 
 find_package (DCMTK REQUIRED PATH ${DCMTK_DIR} NO_DEFAULT_PATH)
@@ -17,8 +17,8 @@ elseif (NOT DCMTK_FOUND)
 	message (FATAL_ERROR "Could not find DCMTK at ${DCMTK_PATH}")
 endif (DCMTK_FOUND)
 
-include_directories("E:/dev/dcmtk/_install/include")
-link_directories("E:/dev/dcmtk/_install/lib")
+include_directories("E:/dev/dcmtk/_install_32/include")
+link_directories("E:/dev/dcmtk/_install_32/lib")
 
 FIND_PACKAGE(Boost 1.60.0 COMPONENTS filesystem system)
 
