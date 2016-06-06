@@ -17,14 +17,15 @@
 using namespace std;
 namespace fs = boost::filesystem;
 
-int main() { // передаем функции аргументы
+int main(int argc, char *argv[]) { // передаем функции аргументы
 	bool first_file = true; // первому файлу присваиваем true, остальным - false
 
-	for (fs::recursive_directory_iterator it("E:/CT/hip/ct-27.08.2015/ct-27.08.2015/DICOM/PA000000/ST000000/SE000000"), end; it != end; it++) { // пробегаем циклом по всем файлам дирректории
+	for (fs::recursive_directory_iterator it(argv[1]), end; it != end; it++) { // пробегаем циклом по всем файлам дирректории
 		if (first_file) { // если первый файл, то
-
+			
 			DcmFileFormat fileformat;
-			OFCondition status = fileformat.loadFile("E:/CT/tom.dcm");
+			string filename;
+			OFCondition status = fileformat.loadFile(filename);
 			if (status.good()) {
 				OFString SliceThickness;
 				if (fileformat.getDataset()->findAndGetOFString(DCM_SliceThickness, SliceThickness).good())
@@ -81,7 +82,28 @@ int main() { // передаем функции аргументы
 				{
 					cout << "Pixel Data was written" << endl;
 				}
+				first_file = false;
 			}
 		}
+		else {
+			cout << *it << endl; // чтоб видеть, на каком файле сейчас итератор
+			DcmFileFormat fileformat;
+			OFCondition status = fileformat.loadFile(argv[3]);
+			if (status.good()) {
+				OFString PixelData;
+				if (fileformat.getDataset()->findAndGetOFString(DCM_PixelData, PixelData).good())
+				{
+					ofstream fout("pixel_data.raw", ios_base::binary);
+					if (!fout) {
+						cout << "File error";
+						return 1;
+					}
+
+					cout << "Pixel Data was written" << endl;
+				}
+			}
+			
+		}
+
 	}
 }
