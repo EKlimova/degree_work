@@ -22,10 +22,13 @@ int main(int argc, char *argv[]) { // передаем функции аргументы
 
 	for (fs::recursive_directory_iterator it(argv[1]), end; it != end; it++) { // пробегаем циклом по всем файлам дирректории
 		if (first_file) { // если первый файл, то
+			//надо получить имя следующего файла
 			
 			DcmFileFormat fileformat;
-			string filename;
-			OFCondition status = fileformat.loadFile(filename);
+			string name_of_file;
+			it->path().filename() = name_of_file; //я хочу присвоить name_of_file имя переменной
+
+			OFCondition status = fileformat.loadFile(name_of_file.c_str()); // проверяем, загрузился ли файл
 			if (status.good()) {
 				OFString SliceThickness;
 				if (fileformat.getDataset()->findAndGetOFString(DCM_SliceThickness, SliceThickness).good())
