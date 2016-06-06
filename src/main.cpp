@@ -26,7 +26,7 @@ int main(int argc, char *argv[]) { // передаем функции аргументы
 			
 			DcmFileFormat fileformat;
 			string name_of_file;
-			it->path().filename() = name_of_file; //я хочу присвоить name_of_file имя переменной
+			name_of_file = it->path().string(); //я хочу присвоить name_of_file имя переменной
 
 			OFCondition status = fileformat.loadFile(name_of_file.c_str()); // проверяем, загрузился ли файл
 			if (status.good()) {
@@ -81,8 +81,14 @@ int main(int argc, char *argv[]) { // передаем функции аргументы
 					cout << "High Bit: " << HighBit << endl;
 				}
 				OFString PixelData;
-				if (fileformat.getDataset()->findAndGetOFString(DCM_PixelData, PixelData).good())
+				if (fileformat.getDataset()->findAndGetOFStringArray(DCM_PixelData, PixelData).good())
 				{
+					ofstream fout("pixel_data.raw", ios_base::binary);
+					if (!fout) {
+						cout << "File error";
+						return 1;
+					}
+					fout.write(reinterpret_cast<char *>(&PixelData), 524288);
 					cout << "Pixel Data was written" << endl;
 				}
 				first_file = false;
@@ -91,17 +97,20 @@ int main(int argc, char *argv[]) { // передаем функции аргументы
 		else {
 			cout << *it << endl; // чтоб видеть, на каком файле сейчас итератор
 			DcmFileFormat fileformat;
-			OFCondition status = fileformat.loadFile(argv[3]);
+			string name_of_file;
+			name_of_file = it->path().string(); //я хочу присвоить name_of_file имя переменной
+
+			OFCondition status = fileformat.loadFile(name_of_file.c_str()); // проверяем, загрузился ли файл
 			if (status.good()) {
 				OFString PixelData;
-				if (fileformat.getDataset()->findAndGetOFString(DCM_PixelData, PixelData).good())
+				if (fileformat.getDataset()->findAndGetOFStringArray(DCM_PixelData, PixelData).good())
 				{
 					ofstream fout("pixel_data.raw", ios_base::binary);
 					if (!fout) {
 						cout << "File error";
 						return 1;
 					}
-
+					fout.write(reinterpret_cast<char *>(&PixelData), 524288);
 					cout << "Pixel Data was written" << endl;
 				}
 			}
