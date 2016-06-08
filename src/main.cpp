@@ -28,13 +28,12 @@ int main(int argc, char *argv[]) { // передаем функции аргументы
 	OFString BitsAllocated;
 	Uint16 BitsStored;
 	OFString HighBit;
-	DcmElement* PixelData;
+	const Uint16 * PixelData;
 
 	
 	for (fs::recursive_directory_iterator it(argv[1]), end; it != end;
 	it++) { // пробегаем циклом по всем файлам дирректории
 			// если первый файл, то
- //надо получить имя следующего файла
 
 		DcmFileFormat fileformat;
 		string name_of_file;
@@ -103,15 +102,9 @@ int main(int argc, char *argv[]) { // передаем функции аргументы
 			cout << *it << endl; // чтоб видеть, на каком файле сейчас итератор
 
 			if (fileformat.getDataset()
-				->findAndGetElement(DCM_PixelData, PixelData)
+				->findAndGetUint16Array(DCM_PixelData, PixelData)
 				.good()) {
-				ofstream fout("pixel_data.raw", ios_base::binary);
-				if (!fout) {
-					cout << "File error";
-					return 1;
-				}
-
-				fout.write(reinterpret_cast<char *>(&PixelData), Rows*Columns*BitsStored / 8);
+				
 				cout << Rows*Columns*BitsStored / 8 << endl;
 			}
 		}
