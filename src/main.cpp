@@ -17,18 +17,20 @@ namespace fs = boost::filesystem;
 
 int main(int argc, char *argv[]) { // передаем функции аргументы
 	bool first_file = true; // первому файлу присваиваем true, остальным - false
+	bool second_file = true;
 
-	Float64 sliceThickness;
 	Float64 x_imagePosition;
 	Float64 y_imagePosition;
 	Float64 z_imagePosition;
-	Float64 xr_imageOrientationPatient;
-	Float64 yr_imageOrientationPatient;
-	Float64 zr_imageOrientationPatient;
-	Float64 xc_imageOrientationPatient;
-	Float64 yc_imageOrientationPatient;
-	Float64 zc_imageOrientationPatient;
+	Float64 xx_imageOrientationPatient;
+	Float64 xy_imageOrientationPatient;
+	Float64 xz_imageOrientationPatient;
+	Float64 yx_imageOrientationPatient;
+	Float64 yy_imageOrientationPatient;
+	Float64 yz_imageOrientationPatient;
 	Float64 sliceLocation;
+	Float64 sliceLocation1;
+	Float64 sliceLocation2;
 	Uint16 rows;
 	Uint16 columns;
 	Float64 x_pixelSpacing;
@@ -53,11 +55,6 @@ int main(int argc, char *argv[]) { // передаем функции аргументы
 		if (status.good()) {
 			if (first_file) {
 				if (fileformat.getDataset()
-					->findAndGetFloat64(DCM_SliceThickness, sliceThickness)
-					.good()) {
-					cout << "Slice Thickness: " << sliceThickness << endl;
-				}
-				if (fileformat.getDataset()
 					->findAndGetFloat64(DCM_ImagePositionPatient, x_imagePosition)
 					.good()) {
 					cout << "Image Position, X: " << x_imagePosition << endl;
@@ -73,45 +70,45 @@ int main(int argc, char *argv[]) { // передаем функции аргументы
 					cout << "Image Position, Z: " << z_imagePosition << endl;
 				}
 				if (fileformat.getDataset()
-					->findAndGetFloat64(DCM_ImageOrientationPatient, xr_imageOrientationPatient)
+					->findAndGetFloat64(DCM_ImageOrientationPatient, xx_imageOrientationPatient)
 					.good()) {
-					cout << "Image Orientation (Patient), XR: " << xr_imageOrientationPatient
+					cout << "Image Orientation (Patient), Xx: " << xx_imageOrientationPatient
 						<< endl;
 				}
 				if (fileformat.getDataset()
-					->findAndGetFloat64(DCM_ImageOrientationPatient, yr_imageOrientationPatient, 1)
+					->findAndGetFloat64(DCM_ImageOrientationPatient, xy_imageOrientationPatient, 1)
 					.good()) {
-					cout << "Image Orientation (Patient), YR: " << yr_imageOrientationPatient
+					cout << "Image Orientation (Patient), Xy: " << xy_imageOrientationPatient
 						<< endl;
 				}
 				if (fileformat.getDataset()
-					->findAndGetFloat64(DCM_ImageOrientationPatient, zr_imageOrientationPatient, 2)
+					->findAndGetFloat64(DCM_ImageOrientationPatient, xz_imageOrientationPatient, 2)
 					.good()) {
-					cout << "Image Orientation (Patient), ZR: " << zr_imageOrientationPatient
+					cout << "Image Orientation (Patient), Xz: " << xz_imageOrientationPatient
 						<< endl;
 				}
 				if (fileformat.getDataset()
-					->findAndGetFloat64(DCM_ImageOrientationPatient, xc_imageOrientationPatient, 3)
+					->findAndGetFloat64(DCM_ImageOrientationPatient, yx_imageOrientationPatient, 3)
 					.good()) {
-					cout << "Image Orientation (Patient), XC: " << xc_imageOrientationPatient
+					cout << "Image Orientation (Patient), Yx: " << yx_imageOrientationPatient
 						<< endl;
 				}
 				if (fileformat.getDataset()
-					->findAndGetFloat64(DCM_ImageOrientationPatient, yc_imageOrientationPatient, 4)
+					->findAndGetFloat64(DCM_ImageOrientationPatient, yy_imageOrientationPatient, 4)
 					.good()) {
-					cout << "Image Orientation (Patient), YC: " << yc_imageOrientationPatient
+					cout << "Image Orientation (Patient), Yy: " << yy_imageOrientationPatient
 						<< endl;
 				}
 				if (fileformat.getDataset()
-					->findAndGetFloat64(DCM_ImageOrientationPatient, zc_imageOrientationPatient, 5)
+					->findAndGetFloat64(DCM_ImageOrientationPatient, yz_imageOrientationPatient, 5)
 					.good()) {
-					cout << "Image Orientation (Patient), ZC: " << zc_imageOrientationPatient
+					cout << "Image Orientation (Patient), Yz: " << yz_imageOrientationPatient
 						<< endl;
 				}
 				if (fileformat.getDataset()
-					->findAndGetFloat64(DCM_SliceLocation, sliceLocation)
+					->findAndGetFloat64(DCM_SliceLocation, sliceLocation1)
 					.good()) {
-					cout << "Slice Location: " << sliceLocation << endl;
+					cout << "Slice Location from the first image: " << sliceLocation1 << endl;
 				}
 				if (fileformat.getDataset()
 					->findAndGetUint16(DCM_Rows, rows)
@@ -148,8 +145,8 @@ int main(int argc, char *argv[]) { // передаем функции аргументы
 					.good()) {
 					cout << "High Bit: " << highBit << endl;
 				}
-				first_file = false;
 			}
+			
 
 			cout << *it << endl; // чтоб видеть, на каком файле сейчас итератор
 
@@ -160,5 +157,17 @@ int main(int argc, char *argv[]) { // передаем функции аргументы
 				cout << rows*columns*bitsStored / 8 << endl;
 			}
 		}
+		if (!first_file && second_file) {
+			if (fileformat.getDataset()
+				->findAndGetFloat64(DCM_SliceLocation, sliceLocation2)
+				.good()) {
+				cout << "Slice Location from the second image: " << sliceLocation2 << endl;
+				sliceLocation = sliceLocation2 - sliceLocation1;
+				cout << "Real Slice Location: " << sliceLocation << endl;
+			}
+			second_file = false;
+		}
+
+		first_file = false;
 	}
 }
