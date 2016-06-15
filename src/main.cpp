@@ -180,9 +180,13 @@ int main(int argc, char *argv[]) { // передаем функции аргументы
 					pixelData = (short*)inter->getData(); // читаем значения в pixel data
 					if (pixelData != NULL)
 					{
-						for (unsigned long i = 0; i < numByte; i++) // записываем значения в массив value
+						for (unsigned long dot = 0; dot < numByte; dot++) // записываем значения в массив value
 						{
-							value[i] = pixelData[i];
+							value[dot] = pixelData[dot];
+							XYZ miumiu;
+							miumiu.x = dot*x_pixelSpacing + x_imagePosition;;
+							miumiu.y = dot*y_pixelSpacing + y_imagePosition;;
+							miumiu.z = dot*sliceLocation + z_imagePosition;
 						}
 					}
 					delete[] value;
