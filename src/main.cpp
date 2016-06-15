@@ -7,7 +7,9 @@
 #include "dcmtk/config/osconfig.h"
 #include "dcmtk/dcmdata/dctagkey.h"
 #include "dcmtk/dcmdata/dctk.h"
-#include "dcmtk/dcmdata/dctk.h"
+#include "dcmtk/dcmdata/dcpxitem.h"
+#include "dcmtk/dcmimage/diregist.h" 
+#include "dcmtk/dcmimgle/dcmimage.h"
 
 // Boost includes
 #include <boost/filesystem.hpp>
@@ -15,11 +17,21 @@
 using namespace std;
 namespace fs = boost::filesystem;
 
-// создаем трехмерный массив €чеек, вершины которых содержат плотности воксел€
-struct gridcell {
-	int x,y,z;
-	int voxel_weight;
+// структура должна содержать координаты €чеек 
+struct XYZ {
+	double x, y, z;
 };
+
+typedef struct {
+	XYZ p[3];
+} TRIANGLE;
+
+typedef struct {
+	XYZ p[8];
+	double val[8];
+} GRIDCELL;
+
+
 
 int main(int argc, char *argv[]) { // передаем функции аргументы
 	bool first_file = true; // первому файлу присваиваем true, остальным - false
@@ -44,7 +56,7 @@ int main(int argc, char *argv[]) { // передаем функции аргументы
 	Uint16 bitsAllocated;
 	Uint16 bitsStored;
 	Uint16 highBit;
-	const Uint16 * pixelData;
+	const Sint16 * pixelData;
 	int image_num = 0;
 
 	
@@ -154,13 +166,23 @@ int main(int argc, char *argv[]) { // передаем функции аргументы
 				}
 			}
 			
+			
 
-			if (fileformat.getDataset()
-				->findAndGetUint16Array(DCM_PixelData, pixelData)
-				.good()) {
-				
-				cout << "Ok"<< endl;
+
+
+			DicomImage image(name_of_file.c_str());
+			if (image.getStatus() == EIS_Normal)
+			{
+				const DiPixel *inter = image.getInterData();
+				if (inter != NULL)
+				{
+					COUT << "number of bytes: " << inter->getCount() << endl;
+					cout << "проверим:" << inter->getData() << endl;
+				}
 			}
+			else
+				CERR << "cannot load file: " << name_of_file.c_str() << endl;
+			
 		}
 		if (!first_file && second_file) {
 			if (fileformat.getDataset()
@@ -176,26 +198,49 @@ int main(int argc, char *argv[]) { // передаем функции аргументы
 		first_file = false;
 		image_num++;
 	}
-	gridcell coordinate;
-	for (int i = 0; i < rows - 1; i++) {
-		for (int j = 0; j < columns - 1; j++) {
-			for (int k = 0; k < image_num - 1; k++) {
-				coordinate.x = i*x_pixelSpacing + x_imagePosition;
-				coordinate.y = j*y_pixelSpacing + y_imagePosition;
-				coordinate.z = k*sliceLocation + z_imagePosition;
+	XYZ coordinate;
+	XYZ pos[3];
+	for (int i = 0; i < 7; i++) {
+		for (int j = 0; j < 7; j++) {
+			for (int k = 0; k < 7; k++) {/*
+				coordinate.x[i] = i*x_pixelSpacing + x_imagePosition;
+				coordinate.y[j] = j*y_pixelSpacing + y_imagePosition;
+				coordinate.z[k] = k*sliceLocation + z_imagePosition;
+				pos[3] = { coordinate.x[i], coordinate.y[i],coordinate.z[i] };*/
 			}
 		}
 	}
 	
 }
-typedef struct {
-	XYZ p[3];
-} TRIANGLE;
 
-typedef struct {
-	XYZ p[8];
-	double val[8];
-} GRIDCELL;
+double isolevel = 200.56;
+
+
+double ABS(double a) {
+	if (a >= 0.0)
+		return a;
+	else return -a;
+}
+
+
+XYZ VertexInterp(double isolevel, XYZ p1, XYZ p2, double valp1, double valp2)
+{
+	double mu;
+	XYZ p;
+
+	if (ABS(isolevel - valp1) < 0.00001)
+		return(p1);
+	if (ABS(isolevel - valp2) < 0.00001)
+		return(p2);
+	if (ABS(valp1 - valp2) < 0.00001)
+		return(p1);
+	mu = (isolevel - valp1) / (valp2 - valp1);
+	p.x = p1.x + mu * (p2.x - p1.x);
+	p.y = p1.y + mu * (p2.y - p1.y);
+	p.z = p1.z + mu * (p2.z - p1.z);
+
+	return(p);
+}
 
 /*
 Given a grid cell and an isolevel, calculate the triangular
@@ -574,24 +619,3 @@ int Polygonise(GRIDCELL grid, double isolevel, TRIANGLE *triangles)
 Linearly interpolate the position where an isosurface cuts
 an edge between two vertices, each with their own scalar value
 */
-XYZ VertexInterp(isolevel, p1, p2, valp1, valp2)
-double isolevel;
-XYZ p1, p2;
-double valp1, valp2;
-{
-	double mu;
-	XYZ p;
-
-	if (ABS(isolevel - valp1) < 0.00001)
-		return(p1);
-	if (ABS(isolevel - valp2) < 0.00001)
-		return(p2);
-	if (ABS(valp1 - valp2) < 0.00001)
-		return(p1);
-	mu = (isolevel - valp1) / (valp2 - valp1);
-	p.x = p1.x + mu * (p2.x - p1.x);
-	p.y = p1.y + mu * (p2.y - p1.y);
-	p.z = p1.z + mu * (p2.z - p1.z);
-
-	return(p);
-}
