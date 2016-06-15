@@ -32,7 +32,6 @@ typedef struct {
 } GRIDCELL;
 
 
-
 int main(int argc, char *argv[]) { // передаем функции аргументы
 	bool first_file = true; // первому файлу присваиваем true, остальным - false
 	bool second_file = true;
@@ -57,13 +56,15 @@ int main(int argc, char *argv[]) { // передаем функции аргументы
 	Uint16 bitsStored;
 	Uint16 highBit;
 	const Sint16 * pixelData;
-	int image_num = 0;
+	int image_num = 0; //количество снимков
+	
 
 	
 	for (fs::recursive_directory_iterator it(argv[1]), end; it != end;
 	it++) { // пробегаем циклом по всем файлам дирректории
 			// если первый файл, то
 
+		
 		DcmFileFormat fileformat;
 		string name_of_file;
 		name_of_file =
@@ -165,24 +166,30 @@ int main(int argc, char *argv[]) { // передаем функции аргументы
 					cout << "High Bit: " << highBit << endl;
 				}
 			}
-			
-			
-
-
-
-			DicomImage image(name_of_file.c_str());
-			if (image.getStatus() == EIS_Normal)
+			// считывание pixel data, ссылка на пример: http://forum.dcmtk.org/viewtopic.php?f=1&t=4001
+			unsigned long numByte = 0; // количество бит
+			short* pixelData = NULL; // создаем массив pixel data
+			DicomImage* img = new DicomImage(name_of_file.c_str());
+			if (img->getStatus() == EIS_Normal) // проверяем, открылось ли
 			{
-				const DiPixel *inter = image.getInterData();
+				const DiPixel *inter = img->getInterData(); // 
 				if (inter != NULL)
 				{
-					COUT << "number of bytes: " << inter->getCount() << endl;
-					cout << "проверим:" << inter->getData() << endl;
+					numByte = inter->getCount(); // считаем количество бит
+					short *value = new short[numByte]; // массив значений
+					pixelData = (short*)inter->getData(); // читаем значения в pixel data
+					if (pixelData != NULL)
+					{
+						for (unsigned long i = 0; i < numByte; i++) // записываем значения в массив value
+						{
+							value[i] = pixelData[i];
+						}
+					}
+					delete[] value;
 				}
 			}
-			else
-				CERR << "cannot load file: " << name_of_file.c_str() << endl;
-			
+			free(pixelData);
+
 		}
 		if (!first_file && second_file) {
 			if (fileformat.getDataset()
@@ -198,22 +205,8 @@ int main(int argc, char *argv[]) { // передаем функции аргументы
 		first_file = false;
 		image_num++;
 	}
-	XYZ coordinate;
-	XYZ pos[3];
-	for (int i = 0; i < 7; i++) {
-		for (int j = 0; j < 7; j++) {
-			for (int k = 0; k < 7; k++) {/*
-				coordinate.x[i] = i*x_pixelSpacing + x_imagePosition;
-				coordinate.y[j] = j*y_pixelSpacing + y_imagePosition;
-				coordinate.z[k] = k*sliceLocation + z_imagePosition;
-				pos[3] = { coordinate.x[i], coordinate.y[i],coordinate.z[i] };*/
-			}
-		}
-	}
-	
-}
 
-double isolevel = 200.56;
+}
 
 
 double ABS(double a) {
@@ -222,7 +215,10 @@ double ABS(double a) {
 	else return -a;
 }
 
-
+/*
+Linearly interpolate the position where an isosurface cuts
+an edge between two vertices, each with their own scalar value
+*/
 XYZ VertexInterp(double isolevel, XYZ p1, XYZ p2, double valp1, double valp2)
 {
 	double mu;
@@ -250,7 +246,10 @@ will be loaded up with the vertices at most 5 triangular facets.
 0 will be returned if the grid cell is either totally above
 of totally below the isolevel.
 */
-int Polygonise(GRIDCELL grid, double isolevel, TRIANGLE *triangles)
+for (int i = 0; i < ((rows - 1)*(columns - 1)*(image_num - 1) - 1); i++) { // цикл, считающий треугольники столько раз, сколько есть вокселей (именно тех, в которых вершины - плотности)
+
+}
+int Polygonise(GRIDCELL grid, int argc, char *argv[], TRIANGLE *triangles)
 {
 	int i, ntriang;
 	int cubeindex;
@@ -552,6 +551,8 @@ int Polygonise(GRIDCELL grid, double isolevel, TRIANGLE *triangles)
 	tells us which vertices are inside of the surface
 	*/
 	cubeindex = 0;
+	double isolevel = *argv[2];
+
 	if (grid.val[0] < isolevel) cubeindex |= 1;
 	if (grid.val[1] < isolevel) cubeindex |= 2;
 	if (grid.val[2] < isolevel) cubeindex |= 4;
@@ -614,8 +615,3 @@ int Polygonise(GRIDCELL grid, double isolevel, TRIANGLE *triangles)
 
 	return(ntriang);
 }
-
-/*
-Linearly interpolate the position where an isosurface cuts
-an edge between two vertices, each with their own scalar value
-*/
