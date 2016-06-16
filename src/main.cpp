@@ -5,10 +5,10 @@
 // DCMTK includes
 #include "dcmtk/config/osconfig.h"
 #include "dcmtk/config/osconfig.h"
+#include "dcmtk/dcmdata/dcpxitem.h"
 #include "dcmtk/dcmdata/dctagkey.h"
 #include "dcmtk/dcmdata/dctk.h"
-#include "dcmtk/dcmdata/dcpxitem.h"
-#include "dcmtk/dcmimage/diregist.h" 
+#include "dcmtk/dcmimage/diregist.h"
 #include "dcmtk/dcmimgle/dcmimage.h"
 
 // Boost includes
@@ -17,248 +17,354 @@
 using namespace std;
 namespace fs = boost::filesystem;
 
-// структура должна содержать координаты ячеек 
+// структура должна содержать координаты ячеек
 struct XYZ {
-	double x, y, z;
-	double coordinates[3];
+  double x, y, z;
 };
 
-typedef struct {
-	XYZ p[3];
-} TRIANGLE;
-
-typedef struct {
-	XYZ p[8];
-	double val[8];
-} GRIDCELL;
+typedef struct { XYZ p[3]; } TRIANGLE;
 
 
-int main(int argc, char *argv[]) { // передаем функции аргументы
-	bool first_file = true; // первому файлу присваиваем true, остальным - false
-	bool second_file = true;
+void save_model(vector<TRIANGLE> triangles, string filename) {
+	ofstream f;
+	f.open(filename, ios::out | ios::binary);
+	if (!f.is_open()) { cout << "Файл не открылся"; }
 
-	Float64 x_imagePosition;
-	Float64 y_imagePosition;
-	Float64 z_imagePosition;
-	Float64 xx_imageOrientationPatient;
-	Float64 xy_imageOrientationPatient;
-	Float64 xz_imageOrientationPatient;
-	Float64 yx_imageOrientationPatient;
-	Float64 yy_imageOrientationPatient;
-	Float64 yz_imageOrientationPatient;
-	Float64 sliceLocation;
-	Float64 sliceLocation1;
-	Float64 sliceLocation2;
-	Uint16 rows;
-	Uint16 columns;
-	Float64 x_pixelSpacing;
-	Float64 y_pixelSpacing;
-	Uint16 bitsAllocated;
-	Uint16 bitsStored;
-	Uint16 highBit;
-	int image_num = 0; //количество снимков
-	XYZ miumiu; // переменная типа структура XYZ
-	XYZ dot[3]; // массив, содержащий три координаты каждой точки
-
-
-
-	for (fs::recursive_directory_iterator it(argv[1]), end; it != end;
-	it++) { // пробегаем циклом по всем файлам дирректории
-			// если первый файл, то
-
-
-		DcmFileFormat fileformat;
-		string name_of_file;
-		name_of_file =
-			it->path().string(); //я хочу присвоить name_of_file имя переменной
-
-		OFCondition status = fileformat.loadFile(
-			name_of_file.c_str()); // проверяем, загрузился ли файл
-		if (status.good()) {
-			if (first_file) {
-				if (fileformat.getDataset()
-					->findAndGetFloat64(DCM_ImagePositionPatient, x_imagePosition)
-					.good()) {
-					cout << "Image Position, X: " << x_imagePosition << endl;
-				}
-				if (fileformat.getDataset()
-					->findAndGetFloat64(DCM_ImagePositionPatient, y_imagePosition, 1)
-					.good()) {
-					cout << "Image Position, Y: " << y_imagePosition << endl;
-				}
-				if (fileformat.getDataset()
-					->findAndGetFloat64(DCM_ImagePositionPatient, z_imagePosition, 2)
-					.good()) {
-					cout << "Image Position, Z: " << z_imagePosition << endl;
-				}
-				if (fileformat.getDataset()
-					->findAndGetFloat64(DCM_ImageOrientationPatient, xx_imageOrientationPatient)
-					.good()) {
-					cout << "Image Orientation (Patient), Xx: " << xx_imageOrientationPatient
-						<< endl;
-				}
-				if (fileformat.getDataset()
-					->findAndGetFloat64(DCM_ImageOrientationPatient, xy_imageOrientationPatient, 1)
-					.good()) {
-					cout << "Image Orientation (Patient), Xy: " << xy_imageOrientationPatient
-						<< endl;
-				}
-				if (fileformat.getDataset()
-					->findAndGetFloat64(DCM_ImageOrientationPatient, xz_imageOrientationPatient, 2)
-					.good()) {
-					cout << "Image Orientation (Patient), Xz: " << xz_imageOrientationPatient
-						<< endl;
-				}
-				if (fileformat.getDataset()
-					->findAndGetFloat64(DCM_ImageOrientationPatient, yx_imageOrientationPatient, 3)
-					.good()) {
-					cout << "Image Orientation (Patient), Yx: " << yx_imageOrientationPatient
-						<< endl;
-				}
-				if (fileformat.getDataset()
-					->findAndGetFloat64(DCM_ImageOrientationPatient, yy_imageOrientationPatient, 4)
-					.good()) {
-					cout << "Image Orientation (Patient), Yy: " << yy_imageOrientationPatient
-						<< endl;
-				}
-				if (fileformat.getDataset()
-					->findAndGetFloat64(DCM_ImageOrientationPatient, yz_imageOrientationPatient, 5)
-					.good()) {
-					cout << "Image Orientation (Patient), Yz: " << yz_imageOrientationPatient
-						<< endl;
-				}
-				if (fileformat.getDataset()
-					->findAndGetFloat64(DCM_SliceLocation, sliceLocation1)
-					.good()) {
-					cout << "Slice Location from the first image: " << sliceLocation1 << endl;
-				}
-				if (fileformat.getDataset()
-					->findAndGetUint16(DCM_Rows, rows)
-					.good()) {
-					cout << "Rows: " << rows << endl;
-				}
-				if (fileformat.getDataset()
-					->findAndGetUint16(DCM_Columns, columns)
-					.good()) {
-					cout << "Columns: " << columns << endl;
-				}
-				if (fileformat.getDataset()
-					->findAndGetFloat64(DCM_PixelSpacing, x_pixelSpacing)
-					.good()) {
-					cout << "Pixel Spacing, X: " << x_pixelSpacing << endl;
-				}
-				if (fileformat.getDataset()
-					->findAndGetFloat64(DCM_PixelSpacing, y_pixelSpacing, 1)
-					.good()) {
-					cout << "Pixel Spacing, Y: " << y_pixelSpacing << endl;
-				}
-				if (fileformat.getDataset()
-					->findAndGetUint16(DCM_BitsAllocated, bitsAllocated)
-					.good()) {
-					cout << "Bits Allocated: " << bitsAllocated << endl;
-				}
-				if (fileformat.getDataset()
-					->findAndGetUint16(DCM_BitsStored, bitsStored)
-					.good()) {
-					cout << "Bits Stored: " << bitsStored << endl;
-				}
-				if (fileformat.getDataset()
-					->findAndGetUint16(DCM_HighBit, highBit)
-					.good()) {
-					cout << "High Bit: " << highBit << endl;
-				}
-			}
-			// считывание pixel data, ссылка на пример: http://forum.dcmtk.org/viewtopic.php?f=1&t=4001
-			unsigned long numByte = 0; // количество бит
-			short* pixelData = NULL; // создаем массив pixel data
-			DicomImage* img = new DicomImage(name_of_file.c_str());
-			if (img->getStatus() == EIS_Normal) // проверяем, открылось ли
-			{
-				const DiPixel *inter = img->getInterData(); // считываем пиксельные данные
-				if (inter != NULL)
-				{
-					numByte = inter->getCount(); // считаем количество бит
-					short **value = new short *[rows]; // выделение памяти под массив указателей
-					for (int k = 0; k < rows; k++) {
-						value[k] = new short[columns]; // выделение памяти по массив значений
-					}
-					pixelData = (short*)inter->getData(); // читаем значения в pixel data
-					if (pixelData != NULL)
-					{
-						for (unsigned long i_dot = 0, n = 0; i_dot < rows; i_dot++)
-						{
-							for (int j_dot = 0; j_dot < columns; j_dot++) {
-
-								value[i_dot][j_dot] = pixelData[n++]; // записываем значения в массив value
-
-								miumiu.x = i_dot*x_pixelSpacing + x_imagePosition;; // вычисляем x
-								miumiu.y = j_dot*y_pixelSpacing + y_imagePosition;; // вычисляем y
-								miumiu.z = image_num*0.8 + z_imagePosition; // вычисляем z
-								dot[0].coordinates[0] = miumiu.x; // x - первый элемент массива
-								dot[1].coordinates[1] = miumiu.y; // y - второй элемент массива
-								dot[2].coordinates[2] = miumiu.z; // z - третий элемент массива
-								cout << "value[0][0]" << value[0][0] << endl; // проверяем значение первого элемента (надо "-2048")
-								for (int i = 0; i < 3; i++)
-								{
-									cout << "dot[i].coordinates[i]" << dot[i].coordinates[i] << endl; // проверяем, что записалось в качестве координат в массив
-								}
-							}
-						}
-					}
-					for (int i = 0; i < rows; i++) { // удаление динамической памяти
-						delete value[i];
-					}
-					delete[] value;
-				}
-			}
-			free(pixelData);
-
+	char Header[80];
+	unsigned int Number_of_triangles = triangles.size();
+	f.write(Header, 80);
+	f.write((char*)&Number_of_triangles, 4);
+	float normal[3] = { 0.0, 0.0, 0.0 };
+	float x, y, z;
+	unsigned short attribute_byte_count = 0;
+	for (auto t : triangles) {
+		f.write((char*)normal, 12);
+		for (int i = 0; i < 3; i++) {
+			x = t.p[i].x;
+			y = t.p[i].y;
+			z = t.p[i].z;
+			f.write((char*)&x, 4);
+			f.write((char*)&y, 4);
+			f.write((char*)&z, 4);
 		}
-		if (!first_file && second_file) {
-			if (fileformat.getDataset()
-				->findAndGetFloat64(DCM_SliceLocation, sliceLocation2)
-				.good()) {
-				cout << "Slice Location from the second image: " << sliceLocation2 << endl;
-				sliceLocation = sliceLocation2 - sliceLocation1;
-				cout << "Real Slice Location: " << sliceLocation << endl;
-			}
-			second_file = false;
-		}
-
-		first_file = false;
-		image_num++;
+		f.write((char*)&attribute_byte_count, 2);
 	}
+
+	f.close();
 }
 
 
+typedef struct {
+  XYZ p[8];
+  double val[8];
+} GRIDCELL;
+
+int Polygonise(GRIDCELL, double, TRIANGLE *);
+
+int main(int argc, char *argv[]) { // передаем функции аргументы
+  
+
+  vector<vector<vector<short>>> voxel; // трехмерный массив вокселей
+  Float64 x_imagePosition;
+  Float64 y_imagePosition;
+  Float64 z_imagePosition;
+  Float64 xx_imageOrientationPatient;
+  Float64 xy_imageOrientationPatient;
+  Float64 xz_imageOrientationPatient;
+  Float64 yx_imageOrientationPatient;
+  Float64 yy_imageOrientationPatient;
+  Float64 yz_imageOrientationPatient;
+  Float64 sliceLocation;
+  Float64 sliceLocation1;
+  Float64 sliceLocation2;
+  Uint16 rows;
+  Uint16 columns;
+  Float64 x_pixelSpacing;
+  Float64 y_pixelSpacing;
+  Uint16 bitsAllocated;
+  Uint16 bitsStored;
+  Uint16 highBit;
+  int image_num = 0; //количество снимков
+  GRIDCELL cell;     // чтоб передать значения в p[8]
+
+  bool first_file = true; // первому файлу присваиваем true, остальным - false
+  bool second_file = false;
+
+  for (fs::recursive_directory_iterator it(argv[1]), end; it != end;
+       it++) { // пробегаем циклом по всем файлам дирректории
+               // если первый файл, то
+
+    DcmFileFormat fileformat;
+    string name_of_file;
+    name_of_file =
+        it->path().string(); //я хочу присвоить name_of_file имя переменной
+
+    OFCondition status = fileformat.loadFile(
+        name_of_file.c_str()); // проверяем, загрузился ли файл
+    if (status.good()) {
+
+		if (second_file) {
+			second_file = false;
+			if (fileformat.getDataset()
+				->findAndGetFloat64(DCM_SliceLocation,
+					sliceLocation2)
+				.good()) {
+				cout << "Slice Location from the second image: " << sliceLocation2 << endl;
+			}
+		}
+
+      if (first_file) {
+		  first_file = false;
+		  second_file = true;
+        if (fileformat.getDataset()
+                ->findAndGetFloat64(DCM_ImagePositionPatient, x_imagePosition)
+                .good()) {
+          cout << "Image Position, X: " << x_imagePosition << endl;
+        }
+        if (fileformat.getDataset()
+                ->findAndGetFloat64(DCM_ImagePositionPatient, y_imagePosition,
+                                    1)
+                .good()) {
+          cout << "Image Position, Y: " << y_imagePosition << endl;
+        }
+        if (fileformat.getDataset()
+                ->findAndGetFloat64(DCM_ImagePositionPatient, z_imagePosition,
+                                    2)
+                .good()) {
+          cout << "Image Position, Z: " << z_imagePosition << endl;
+        }
+        if (fileformat.getDataset()
+                ->findAndGetFloat64(DCM_ImageOrientationPatient,
+                                    xx_imageOrientationPatient)
+                .good()) {
+          cout << "Image Orientation (Patient), Xx: "
+               << xx_imageOrientationPatient << endl;
+        }
+        if (fileformat.getDataset()
+                ->findAndGetFloat64(DCM_ImageOrientationPatient,
+                                    xy_imageOrientationPatient, 1)
+                .good()) {
+          cout << "Image Orientation (Patient), Xy: "
+               << xy_imageOrientationPatient << endl;
+        }
+        if (fileformat.getDataset()
+                ->findAndGetFloat64(DCM_ImageOrientationPatient,
+                                    xz_imageOrientationPatient, 2)
+                .good()) {
+          cout << "Image Orientation (Patient), Xz: "
+               << xz_imageOrientationPatient << endl;
+        }
+        if (fileformat.getDataset()
+                ->findAndGetFloat64(DCM_ImageOrientationPatient,
+                                    yx_imageOrientationPatient, 3)
+                .good()) {
+          cout << "Image Orientation (Patient), Yx: "
+               << yx_imageOrientationPatient << endl;
+        }
+        if (fileformat.getDataset()
+                ->findAndGetFloat64(DCM_ImageOrientationPatient,
+                                    yy_imageOrientationPatient, 4)
+                .good()) {
+          cout << "Image Orientation (Patient), Yy: "
+               << yy_imageOrientationPatient << endl;
+        }
+        if (fileformat.getDataset()
+                ->findAndGetFloat64(DCM_ImageOrientationPatient,
+                                    yz_imageOrientationPatient, 5)
+                .good()) {
+          cout << "Image Orientation (Patient), Yz: "
+               << yz_imageOrientationPatient << endl;
+        }
+        if (fileformat.getDataset()
+                ->findAndGetFloat64(DCM_SliceLocation, sliceLocation1)
+                .good()) {
+          cout << "Slice Location from the first image: " << sliceLocation1
+               << endl;
+        }
+        if (fileformat.getDataset()->findAndGetUint16(DCM_Rows, rows).good()) {
+          cout << "Rows: " << rows << endl;
+        }
+        if (fileformat.getDataset()
+                ->findAndGetUint16(DCM_Columns, columns)
+                .good()) {
+          cout << "Columns: " << columns << endl;
+        }
+        if (fileformat.getDataset()
+                ->findAndGetFloat64(DCM_PixelSpacing, x_pixelSpacing)
+                .good()) {
+          cout << "Pixel Spacing, X: " << x_pixelSpacing << endl;
+        }
+        if (fileformat.getDataset()
+                ->findAndGetFloat64(DCM_PixelSpacing, y_pixelSpacing, 1)
+                .good()) {
+          cout << "Pixel Spacing, Y: " << y_pixelSpacing << endl;
+        }
+        if (fileformat.getDataset()
+                ->findAndGetUint16(DCM_BitsAllocated, bitsAllocated)
+                .good()) {
+          cout << "Bits Allocated: " << bitsAllocated << endl;
+        }
+        if (fileformat.getDataset()
+                ->findAndGetUint16(DCM_BitsStored, bitsStored)
+                .good()) {
+          cout << "Bits Stored: " << bitsStored << endl;
+        }
+        if (fileformat.getDataset()
+                ->findAndGetUint16(DCM_HighBit, highBit)
+                .good()) {
+          cout << "High Bit: " << highBit << endl;
+        }
+      }
+
+      // считывание pixel data, ссылка на пример:
+      // http://forum.dcmtk.org/viewtopic.php?f=1&t=4001
+      
+	  unsigned long numByte = 0; // количество бит
+      
+	// short* pixelData = NULL; // создаем массив pixel data
+      DicomImage *img = new DicomImage(name_of_file.c_str());
+
+      if (img->getStatus() == EIS_Normal) // проверяем, открылось ли
+      {
+        const DiPixel *inter =
+            img->getInterData(); // считываем пиксельные данные
+        if (inter != NULL) {
+          numByte = inter->getCount(); // считаем количество бит
+
+          short *raw_pixel_data = (short *)inter->getData();
+          if (raw_pixel_data == nullptr) { // если указатель пустой - ошибка
+            cout << "Couldn't acces pixel data!\n";
+            return (1);
+          }
+
+          vector<short> pixel_data(
+              raw_pixel_data,
+              raw_pixel_data + rows * columns); // читаем значения в pixel data,
+                                                // где первый аргумент в скобках
+                                                // - указатель на первый элемент
+                                                // массива, а второй аргумент -
+                                                // на последний элемент массива
+		  vector<vector<short>> slice;
+		  for (int i = 0; i < rows; i++) {
+			  slice.resize(slice.size() + 1);
+			  slice[i].resize(columns);
+			  for (int j = 0; j < columns; j++) {
+				  slice[i][j] = pixel_data[i*columns+j];
+			  }
+		  }
+         
+
+          voxel.push_back(slice);
+		  image_num++;
+        }
+      }
+    }
+  } /*
+                   if (!first_file && second_file) {
+                           if (fileformat.getDataset()
+                                   ->findAndGetFloat64(DCM_SliceLocation,
+       sliceLocation2)
+                                   .good()) {
+                                   cout << "Slice Location from the second
+       image: " << sliceLocation2 << endl;
+                                   sliceLocation = sliceLocation2 -
+       sliceLocation1;
+                                   cout << "Real Slice Location: " <<
+       sliceLocation << endl;
+                           }
+                           second_file = false;
+                   }*/
+
+  first_file = false;
+
+  float dx = x_pixelSpacing;
+  float dy = y_pixelSpacing;
+  float dz = sliceLocation2 - sliceLocation1;
+
+  XYZ p; // координаты текущей точки
+
+  vector<TRIANGLE> triangles;
+  TRIANGLE *tr = nullptr;
+
+  double isolevel = 1000.0;
+
+  for (int i = 0; i < rows - 1; i++) {
+    for (int j = 0; j < columns - 1; j++) {
+      for (int k = 0; k < image_num - 1; k++) {
+
+        cell.p[0].x = x_imagePosition + i * dx;
+        cell.p[0].y = y_imagePosition + j * dy;
+        cell.p[0].z = z_imagePosition + k * dz;
+
+        cell.p[1].x = x_imagePosition + (i + 1) * dx;
+        cell.p[1].y = y_imagePosition + j * dy;
+        cell.p[1].z = z_imagePosition + k * dz;
+
+        cell.p[2].x = x_imagePosition + (i + 1) * dx;
+        cell.p[2].y = y_imagePosition + (j + 1) * dy;
+        cell.p[2].z = z_imagePosition + k * dz;
+
+        cell.p[3].x = x_imagePosition + i * dx;
+        cell.p[3].y = y_imagePosition + (j + 1) * dy;
+        cell.p[3].z = z_imagePosition + k * dz;
+
+        cell.p[4].x = x_imagePosition + i * dx;
+        cell.p[4].y = y_imagePosition + j * dy;
+        cell.p[4].z = z_imagePosition + (k + 1) * dz;
+
+        cell.p[5].x = x_imagePosition + (i + 1) * dx;
+        cell.p[5].y = y_imagePosition + j * dy;
+        cell.p[5].z = z_imagePosition + (k + 1) * dz;
+
+        cell.p[6].x = x_imagePosition + (i + 1) * dx;
+        cell.p[6].y = y_imagePosition + (j + 1) * dy;
+        cell.p[6].z = z_imagePosition + (k + 1) * dz;
+
+        cell.p[7].x = x_imagePosition + i * dx;
+        cell.p[7].y = y_imagePosition + (j + 1) * dy;
+        cell.p[7].z = z_imagePosition + (k + 1) * dz;
+
+		cout << '\n' << i << ' ' << j << ' ' << k;
+
+        int n = Polygonise(cell, isolevel, tr);
+        for (int i = 0; i < n; i++) {
+          triangles.push_back(tr[i]);
+        }
+      }
+    }
+  }
+
+  save_model(triangles, "file.stl");
+
+}
 
 double ABS(double a) {
-	if (a >= 0.0)
-		return a;
-	else return -a;
+  if (a >= 0.0)
+    return a;
+  else
+    return -a;
 }
 
 /*
 Linearly interpolate the position where an isosurface cuts
 an edge between two vertices, each with their own scalar value
 */
-XYZ VertexInterp(double isolevel, XYZ p1, XYZ p2, double valp1, double valp2)
-{
-	double mu;
-	XYZ p;
+XYZ VertexInterp(double isolevel, XYZ p1, XYZ p2, double valp1, double valp2) {
+  double mu;
+  XYZ p;
 
-	if (ABS(isolevel - valp1) < 0.00001)
-		return(p1);
-	if (ABS(isolevel - valp2) < 0.00001)
-		return(p2);
-	if (ABS(valp1 - valp2) < 0.00001)
-		return(p1);
-	mu = (isolevel - valp1) / (valp2 - valp1);
-	p.x = p1.x + mu * (p2.x - p1.x);
-	p.y = p1.y + mu * (p2.y - p1.y);
-	p.z = p1.z + mu * (p2.z - p1.z);
+  if (ABS(isolevel - valp1) < 0.00001)
+    return (p1);
+  if (ABS(isolevel - valp2) < 0.00001)
+    return (p2);
+  if (ABS(valp1 - valp2) < 0.00001)
+    return (p1);
+  mu = (isolevel - valp1) / (valp2 - valp1);
+  p.x = p1.x + mu * (p2.x - p1.x);
+  p.y = p1.y + mu * (p2.y - p1.y);
+  p.z = p1.z + mu * (p2.z - p1.z);
 
-	return(p);
+  return (p);
 }
 
 /*
@@ -269,372 +375,370 @@ will be loaded up with the vertices at most 5 triangular facets.
 0 will be returned if the grid cell is either totally above
 of totally below the isolevel.
 */
-//for (int i = 0; i < ((rows - 1)*(columns - 1)*(image_num - 1) - 1); i++) { // цикл, считающий треугольники столько раз, сколько есть вокселей (именно тех, в которых вершины - плотности)
-//
-//}
-int Polygonise(GRIDCELL grid, int argc, char *argv[], TRIANGLE *triangles)
-{
-	int i, ntriang;
-	int cubeindex;
-	XYZ vertlist[12];
 
-	int edgeTable[256] = {
-		0x0  , 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c,
-		0x80c, 0x905, 0xa0f, 0xb06, 0xc0a, 0xd03, 0xe09, 0xf00,
-		0x190, 0x99 , 0x393, 0x29a, 0x596, 0x49f, 0x795, 0x69c,
-		0x99c, 0x895, 0xb9f, 0xa96, 0xd9a, 0xc93, 0xf99, 0xe90,
-		0x230, 0x339, 0x33 , 0x13a, 0x636, 0x73f, 0x435, 0x53c,
-		0xa3c, 0xb35, 0x83f, 0x936, 0xe3a, 0xf33, 0xc39, 0xd30,
-		0x3a0, 0x2a9, 0x1a3, 0xaa , 0x7a6, 0x6af, 0x5a5, 0x4ac,
-		0xbac, 0xaa5, 0x9af, 0x8a6, 0xfaa, 0xea3, 0xda9, 0xca0,
-		0x460, 0x569, 0x663, 0x76a, 0x66 , 0x16f, 0x265, 0x36c,
-		0xc6c, 0xd65, 0xe6f, 0xf66, 0x86a, 0x963, 0xa69, 0xb60,
-		0x5f0, 0x4f9, 0x7f3, 0x6fa, 0x1f6, 0xff , 0x3f5, 0x2fc,
-		0xdfc, 0xcf5, 0xfff, 0xef6, 0x9fa, 0x8f3, 0xbf9, 0xaf0,
-		0x650, 0x759, 0x453, 0x55a, 0x256, 0x35f, 0x55 , 0x15c,
-		0xe5c, 0xf55, 0xc5f, 0xd56, 0xa5a, 0xb53, 0x859, 0x950,
-		0x7c0, 0x6c9, 0x5c3, 0x4ca, 0x3c6, 0x2cf, 0x1c5, 0xcc ,
-		0xfcc, 0xec5, 0xdcf, 0xcc6, 0xbca, 0xac3, 0x9c9, 0x8c0,
-		0x8c0, 0x9c9, 0xac3, 0xbca, 0xcc6, 0xdcf, 0xec5, 0xfcc,
-		0xcc , 0x1c5, 0x2cf, 0x3c6, 0x4ca, 0x5c3, 0x6c9, 0x7c0,
-		0x950, 0x859, 0xb53, 0xa5a, 0xd56, 0xc5f, 0xf55, 0xe5c,
-		0x15c, 0x55 , 0x35f, 0x256, 0x55a, 0x453, 0x759, 0x650,
-		0xaf0, 0xbf9, 0x8f3, 0x9fa, 0xef6, 0xfff, 0xcf5, 0xdfc,
-		0x2fc, 0x3f5, 0xff , 0x1f6, 0x6fa, 0x7f3, 0x4f9, 0x5f0,
-		0xb60, 0xa69, 0x963, 0x86a, 0xf66, 0xe6f, 0xd65, 0xc6c,
-		0x36c, 0x265, 0x16f, 0x66 , 0x76a, 0x663, 0x569, 0x460,
-		0xca0, 0xda9, 0xea3, 0xfaa, 0x8a6, 0x9af, 0xaa5, 0xbac,
-		0x4ac, 0x5a5, 0x6af, 0x7a6, 0xaa , 0x1a3, 0x2a9, 0x3a0,
-		0xd30, 0xc39, 0xf33, 0xe3a, 0x936, 0x83f, 0xb35, 0xa3c,
-		0x53c, 0x435, 0x73f, 0x636, 0x13a, 0x33 , 0x339, 0x230,
-		0xe90, 0xf99, 0xc93, 0xd9a, 0xa96, 0xb9f, 0x895, 0x99c,
-		0x69c, 0x795, 0x49f, 0x596, 0x29a, 0x393, 0x99 , 0x190,
-		0xf00, 0xe09, 0xd03, 0xc0a, 0xb06, 0xa0f, 0x905, 0x80c,
-		0x70c, 0x605, 0x50f, 0x406, 0x30a, 0x203, 0x109, 0x0 };
-	int triTable[256][16] =
-	{ { -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 0, 1, 9, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 1, 8, 3, 9, 8, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 1, 2, 10, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 0, 8, 3, 1, 2, 10, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 9, 2, 10, 0, 2, 9, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 2, 8, 3, 2, 10, 8, 10, 9, 8, -1, -1, -1, -1, -1, -1, -1 },
-	{ 3, 11, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 0, 11, 2, 8, 11, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 1, 9, 0, 2, 3, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 1, 11, 2, 1, 9, 11, 9, 8, 11, -1, -1, -1, -1, -1, -1, -1 },
-	{ 3, 10, 1, 11, 10, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 0, 10, 1, 0, 8, 10, 8, 11, 10, -1, -1, -1, -1, -1, -1, -1 },
-	{ 3, 9, 0, 3, 11, 9, 11, 10, 9, -1, -1, -1, -1, -1, -1, -1 },
-	{ 9, 8, 10, 10, 8, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 4, 7, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 4, 3, 0, 7, 3, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 0, 1, 9, 8, 4, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 4, 1, 9, 4, 7, 1, 7, 3, 1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 1, 2, 10, 8, 4, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 3, 4, 7, 3, 0, 4, 1, 2, 10, -1, -1, -1, -1, -1, -1, -1 },
-	{ 9, 2, 10, 9, 0, 2, 8, 4, 7, -1, -1, -1, -1, -1, -1, -1 },
-	{ 2, 10, 9, 2, 9, 7, 2, 7, 3, 7, 9, 4, -1, -1, -1, -1 },
-	{ 8, 4, 7, 3, 11, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 11, 4, 7, 11, 2, 4, 2, 0, 4, -1, -1, -1, -1, -1, -1, -1 },
-	{ 9, 0, 1, 8, 4, 7, 2, 3, 11, -1, -1, -1, -1, -1, -1, -1 },
-	{ 4, 7, 11, 9, 4, 11, 9, 11, 2, 9, 2, 1, -1, -1, -1, -1 },
-	{ 3, 10, 1, 3, 11, 10, 7, 8, 4, -1, -1, -1, -1, -1, -1, -1 },
-	{ 1, 11, 10, 1, 4, 11, 1, 0, 4, 7, 11, 4, -1, -1, -1, -1 },
-	{ 4, 7, 8, 9, 0, 11, 9, 11, 10, 11, 0, 3, -1, -1, -1, -1 },
-	{ 4, 7, 11, 4, 11, 9, 9, 11, 10, -1, -1, -1, -1, -1, -1, -1 },
-	{ 9, 5, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 9, 5, 4, 0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 0, 5, 4, 1, 5, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 8, 5, 4, 8, 3, 5, 3, 1, 5, -1, -1, -1, -1, -1, -1, -1 },
-	{ 1, 2, 10, 9, 5, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 3, 0, 8, 1, 2, 10, 4, 9, 5, -1, -1, -1, -1, -1, -1, -1 },
-	{ 5, 2, 10, 5, 4, 2, 4, 0, 2, -1, -1, -1, -1, -1, -1, -1 },
-	{ 2, 10, 5, 3, 2, 5, 3, 5, 4, 3, 4, 8, -1, -1, -1, -1 },
-	{ 9, 5, 4, 2, 3, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 0, 11, 2, 0, 8, 11, 4, 9, 5, -1, -1, -1, -1, -1, -1, -1 },
-	{ 0, 5, 4, 0, 1, 5, 2, 3, 11, -1, -1, -1, -1, -1, -1, -1 },
-	{ 2, 1, 5, 2, 5, 8, 2, 8, 11, 4, 8, 5, -1, -1, -1, -1 },
-	{ 10, 3, 11, 10, 1, 3, 9, 5, 4, -1, -1, -1, -1, -1, -1, -1 },
-	{ 4, 9, 5, 0, 8, 1, 8, 10, 1, 8, 11, 10, -1, -1, -1, -1 },
-	{ 5, 4, 0, 5, 0, 11, 5, 11, 10, 11, 0, 3, -1, -1, -1, -1 },
-	{ 5, 4, 8, 5, 8, 10, 10, 8, 11, -1, -1, -1, -1, -1, -1, -1 },
-	{ 9, 7, 8, 5, 7, 9, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 9, 3, 0, 9, 5, 3, 5, 7, 3, -1, -1, -1, -1, -1, -1, -1 },
-	{ 0, 7, 8, 0, 1, 7, 1, 5, 7, -1, -1, -1, -1, -1, -1, -1 },
-	{ 1, 5, 3, 3, 5, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 9, 7, 8, 9, 5, 7, 10, 1, 2, -1, -1, -1, -1, -1, -1, -1 },
-	{ 10, 1, 2, 9, 5, 0, 5, 3, 0, 5, 7, 3, -1, -1, -1, -1 },
-	{ 8, 0, 2, 8, 2, 5, 8, 5, 7, 10, 5, 2, -1, -1, -1, -1 },
-	{ 2, 10, 5, 2, 5, 3, 3, 5, 7, -1, -1, -1, -1, -1, -1, -1 },
-	{ 7, 9, 5, 7, 8, 9, 3, 11, 2, -1, -1, -1, -1, -1, -1, -1 },
-	{ 9, 5, 7, 9, 7, 2, 9, 2, 0, 2, 7, 11, -1, -1, -1, -1 },
-	{ 2, 3, 11, 0, 1, 8, 1, 7, 8, 1, 5, 7, -1, -1, -1, -1 },
-	{ 11, 2, 1, 11, 1, 7, 7, 1, 5, -1, -1, -1, -1, -1, -1, -1 },
-	{ 9, 5, 8, 8, 5, 7, 10, 1, 3, 10, 3, 11, -1, -1, -1, -1 },
-	{ 5, 7, 0, 5, 0, 9, 7, 11, 0, 1, 0, 10, 11, 10, 0, -1 },
-	{ 11, 10, 0, 11, 0, 3, 10, 5, 0, 8, 0, 7, 5, 7, 0, -1 },
-	{ 11, 10, 5, 7, 11, 5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 10, 6, 5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 0, 8, 3, 5, 10, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 9, 0, 1, 5, 10, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 1, 8, 3, 1, 9, 8, 5, 10, 6, -1, -1, -1, -1, -1, -1, -1 },
-	{ 1, 6, 5, 2, 6, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 1, 6, 5, 1, 2, 6, 3, 0, 8, -1, -1, -1, -1, -1, -1, -1 },
-	{ 9, 6, 5, 9, 0, 6, 0, 2, 6, -1, -1, -1, -1, -1, -1, -1 },
-	{ 5, 9, 8, 5, 8, 2, 5, 2, 6, 3, 2, 8, -1, -1, -1, -1 },
-	{ 2, 3, 11, 10, 6, 5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 11, 0, 8, 11, 2, 0, 10, 6, 5, -1, -1, -1, -1, -1, -1, -1 },
-	{ 0, 1, 9, 2, 3, 11, 5, 10, 6, -1, -1, -1, -1, -1, -1, -1 },
-	{ 5, 10, 6, 1, 9, 2, 9, 11, 2, 9, 8, 11, -1, -1, -1, -1 },
-	{ 6, 3, 11, 6, 5, 3, 5, 1, 3, -1, -1, -1, -1, -1, -1, -1 },
-	{ 0, 8, 11, 0, 11, 5, 0, 5, 1, 5, 11, 6, -1, -1, -1, -1 },
-	{ 3, 11, 6, 0, 3, 6, 0, 6, 5, 0, 5, 9, -1, -1, -1, -1 },
-	{ 6, 5, 9, 6, 9, 11, 11, 9, 8, -1, -1, -1, -1, -1, -1, -1 },
-	{ 5, 10, 6, 4, 7, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 4, 3, 0, 4, 7, 3, 6, 5, 10, -1, -1, -1, -1, -1, -1, -1 },
-	{ 1, 9, 0, 5, 10, 6, 8, 4, 7, -1, -1, -1, -1, -1, -1, -1 },
-	{ 10, 6, 5, 1, 9, 7, 1, 7, 3, 7, 9, 4, -1, -1, -1, -1 },
-	{ 6, 1, 2, 6, 5, 1, 4, 7, 8, -1, -1, -1, -1, -1, -1, -1 },
-	{ 1, 2, 5, 5, 2, 6, 3, 0, 4, 3, 4, 7, -1, -1, -1, -1 },
-	{ 8, 4, 7, 9, 0, 5, 0, 6, 5, 0, 2, 6, -1, -1, -1, -1 },
-	{ 7, 3, 9, 7, 9, 4, 3, 2, 9, 5, 9, 6, 2, 6, 9, -1 },
-	{ 3, 11, 2, 7, 8, 4, 10, 6, 5, -1, -1, -1, -1, -1, -1, -1 },
-	{ 5, 10, 6, 4, 7, 2, 4, 2, 0, 2, 7, 11, -1, -1, -1, -1 },
-	{ 0, 1, 9, 4, 7, 8, 2, 3, 11, 5, 10, 6, -1, -1, -1, -1 },
-	{ 9, 2, 1, 9, 11, 2, 9, 4, 11, 7, 11, 4, 5, 10, 6, -1 },
-	{ 8, 4, 7, 3, 11, 5, 3, 5, 1, 5, 11, 6, -1, -1, -1, -1 },
-	{ 5, 1, 11, 5, 11, 6, 1, 0, 11, 7, 11, 4, 0, 4, 11, -1 },
-	{ 0, 5, 9, 0, 6, 5, 0, 3, 6, 11, 6, 3, 8, 4, 7, -1 },
-	{ 6, 5, 9, 6, 9, 11, 4, 7, 9, 7, 11, 9, -1, -1, -1, -1 },
-	{ 10, 4, 9, 6, 4, 10, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 4, 10, 6, 4, 9, 10, 0, 8, 3, -1, -1, -1, -1, -1, -1, -1 },
-	{ 10, 0, 1, 10, 6, 0, 6, 4, 0, -1, -1, -1, -1, -1, -1, -1 },
-	{ 8, 3, 1, 8, 1, 6, 8, 6, 4, 6, 1, 10, -1, -1, -1, -1 },
-	{ 1, 4, 9, 1, 2, 4, 2, 6, 4, -1, -1, -1, -1, -1, -1, -1 },
-	{ 3, 0, 8, 1, 2, 9, 2, 4, 9, 2, 6, 4, -1, -1, -1, -1 },
-	{ 0, 2, 4, 4, 2, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 8, 3, 2, 8, 2, 4, 4, 2, 6, -1, -1, -1, -1, -1, -1, -1 },
-	{ 10, 4, 9, 10, 6, 4, 11, 2, 3, -1, -1, -1, -1, -1, -1, -1 },
-	{ 0, 8, 2, 2, 8, 11, 4, 9, 10, 4, 10, 6, -1, -1, -1, -1 },
-	{ 3, 11, 2, 0, 1, 6, 0, 6, 4, 6, 1, 10, -1, -1, -1, -1 },
-	{ 6, 4, 1, 6, 1, 10, 4, 8, 1, 2, 1, 11, 8, 11, 1, -1 },
-	{ 9, 6, 4, 9, 3, 6, 9, 1, 3, 11, 6, 3, -1, -1, -1, -1 },
-	{ 8, 11, 1, 8, 1, 0, 11, 6, 1, 9, 1, 4, 6, 4, 1, -1 },
-	{ 3, 11, 6, 3, 6, 0, 0, 6, 4, -1, -1, -1, -1, -1, -1, -1 },
-	{ 6, 4, 8, 11, 6, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 7, 10, 6, 7, 8, 10, 8, 9, 10, -1, -1, -1, -1, -1, -1, -1 },
-	{ 0, 7, 3, 0, 10, 7, 0, 9, 10, 6, 7, 10, -1, -1, -1, -1 },
-	{ 10, 6, 7, 1, 10, 7, 1, 7, 8, 1, 8, 0, -1, -1, -1, -1 },
-	{ 10, 6, 7, 10, 7, 1, 1, 7, 3, -1, -1, -1, -1, -1, -1, -1 },
-	{ 1, 2, 6, 1, 6, 8, 1, 8, 9, 8, 6, 7, -1, -1, -1, -1 },
-	{ 2, 6, 9, 2, 9, 1, 6, 7, 9, 0, 9, 3, 7, 3, 9, -1 },
-	{ 7, 8, 0, 7, 0, 6, 6, 0, 2, -1, -1, -1, -1, -1, -1, -1 },
-	{ 7, 3, 2, 6, 7, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 2, 3, 11, 10, 6, 8, 10, 8, 9, 8, 6, 7, -1, -1, -1, -1 },
-	{ 2, 0, 7, 2, 7, 11, 0, 9, 7, 6, 7, 10, 9, 10, 7, -1 },
-	{ 1, 8, 0, 1, 7, 8, 1, 10, 7, 6, 7, 10, 2, 3, 11, -1 },
-	{ 11, 2, 1, 11, 1, 7, 10, 6, 1, 6, 7, 1, -1, -1, -1, -1 },
-	{ 8, 9, 6, 8, 6, 7, 9, 1, 6, 11, 6, 3, 1, 3, 6, -1 },
-	{ 0, 9, 1, 11, 6, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 7, 8, 0, 7, 0, 6, 3, 11, 0, 11, 6, 0, -1, -1, -1, -1 },
-	{ 7, 11, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 7, 6, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 3, 0, 8, 11, 7, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 0, 1, 9, 11, 7, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 8, 1, 9, 8, 3, 1, 11, 7, 6, -1, -1, -1, -1, -1, -1, -1 },
-	{ 10, 1, 2, 6, 11, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 1, 2, 10, 3, 0, 8, 6, 11, 7, -1, -1, -1, -1, -1, -1, -1 },
-	{ 2, 9, 0, 2, 10, 9, 6, 11, 7, -1, -1, -1, -1, -1, -1, -1 },
-	{ 6, 11, 7, 2, 10, 3, 10, 8, 3, 10, 9, 8, -1, -1, -1, -1 },
-	{ 7, 2, 3, 6, 2, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 7, 0, 8, 7, 6, 0, 6, 2, 0, -1, -1, -1, -1, -1, -1, -1 },
-	{ 2, 7, 6, 2, 3, 7, 0, 1, 9, -1, -1, -1, -1, -1, -1, -1 },
-	{ 1, 6, 2, 1, 8, 6, 1, 9, 8, 8, 7, 6, -1, -1, -1, -1 },
-	{ 10, 7, 6, 10, 1, 7, 1, 3, 7, -1, -1, -1, -1, -1, -1, -1 },
-	{ 10, 7, 6, 1, 7, 10, 1, 8, 7, 1, 0, 8, -1, -1, -1, -1 },
-	{ 0, 3, 7, 0, 7, 10, 0, 10, 9, 6, 10, 7, -1, -1, -1, -1 },
-	{ 7, 6, 10, 7, 10, 8, 8, 10, 9, -1, -1, -1, -1, -1, -1, -1 },
-	{ 6, 8, 4, 11, 8, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 3, 6, 11, 3, 0, 6, 0, 4, 6, -1, -1, -1, -1, -1, -1, -1 },
-	{ 8, 6, 11, 8, 4, 6, 9, 0, 1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 9, 4, 6, 9, 6, 3, 9, 3, 1, 11, 3, 6, -1, -1, -1, -1 },
-	{ 6, 8, 4, 6, 11, 8, 2, 10, 1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 1, 2, 10, 3, 0, 11, 0, 6, 11, 0, 4, 6, -1, -1, -1, -1 },
-	{ 4, 11, 8, 4, 6, 11, 0, 2, 9, 2, 10, 9, -1, -1, -1, -1 },
-	{ 10, 9, 3, 10, 3, 2, 9, 4, 3, 11, 3, 6, 4, 6, 3, -1 },
-	{ 8, 2, 3, 8, 4, 2, 4, 6, 2, -1, -1, -1, -1, -1, -1, -1 },
-	{ 0, 4, 2, 4, 6, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 1, 9, 0, 2, 3, 4, 2, 4, 6, 4, 3, 8, -1, -1, -1, -1 },
-	{ 1, 9, 4, 1, 4, 2, 2, 4, 6, -1, -1, -1, -1, -1, -1, -1 },
-	{ 8, 1, 3, 8, 6, 1, 8, 4, 6, 6, 10, 1, -1, -1, -1, -1 },
-	{ 10, 1, 0, 10, 0, 6, 6, 0, 4, -1, -1, -1, -1, -1, -1, -1 },
-	{ 4, 6, 3, 4, 3, 8, 6, 10, 3, 0, 3, 9, 10, 9, 3, -1 },
-	{ 10, 9, 4, 6, 10, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 4, 9, 5, 7, 6, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 0, 8, 3, 4, 9, 5, 11, 7, 6, -1, -1, -1, -1, -1, -1, -1 },
-	{ 5, 0, 1, 5, 4, 0, 7, 6, 11, -1, -1, -1, -1, -1, -1, -1 },
-	{ 11, 7, 6, 8, 3, 4, 3, 5, 4, 3, 1, 5, -1, -1, -1, -1 },
-	{ 9, 5, 4, 10, 1, 2, 7, 6, 11, -1, -1, -1, -1, -1, -1, -1 },
-	{ 6, 11, 7, 1, 2, 10, 0, 8, 3, 4, 9, 5, -1, -1, -1, -1 },
-	{ 7, 6, 11, 5, 4, 10, 4, 2, 10, 4, 0, 2, -1, -1, -1, -1 },
-	{ 3, 4, 8, 3, 5, 4, 3, 2, 5, 10, 5, 2, 11, 7, 6, -1 },
-	{ 7, 2, 3, 7, 6, 2, 5, 4, 9, -1, -1, -1, -1, -1, -1, -1 },
-	{ 9, 5, 4, 0, 8, 6, 0, 6, 2, 6, 8, 7, -1, -1, -1, -1 },
-	{ 3, 6, 2, 3, 7, 6, 1, 5, 0, 5, 4, 0, -1, -1, -1, -1 },
-	{ 6, 2, 8, 6, 8, 7, 2, 1, 8, 4, 8, 5, 1, 5, 8, -1 },
-	{ 9, 5, 4, 10, 1, 6, 1, 7, 6, 1, 3, 7, -1, -1, -1, -1 },
-	{ 1, 6, 10, 1, 7, 6, 1, 0, 7, 8, 7, 0, 9, 5, 4, -1 },
-	{ 4, 0, 10, 4, 10, 5, 0, 3, 10, 6, 10, 7, 3, 7, 10, -1 },
-	{ 7, 6, 10, 7, 10, 8, 5, 4, 10, 4, 8, 10, -1, -1, -1, -1 },
-	{ 6, 9, 5, 6, 11, 9, 11, 8, 9, -1, -1, -1, -1, -1, -1, -1 },
-	{ 3, 6, 11, 0, 6, 3, 0, 5, 6, 0, 9, 5, -1, -1, -1, -1 },
-	{ 0, 11, 8, 0, 5, 11, 0, 1, 5, 5, 6, 11, -1, -1, -1, -1 },
-	{ 6, 11, 3, 6, 3, 5, 5, 3, 1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 1, 2, 10, 9, 5, 11, 9, 11, 8, 11, 5, 6, -1, -1, -1, -1 },
-	{ 0, 11, 3, 0, 6, 11, 0, 9, 6, 5, 6, 9, 1, 2, 10, -1 },
-	{ 11, 8, 5, 11, 5, 6, 8, 0, 5, 10, 5, 2, 0, 2, 5, -1 },
-	{ 6, 11, 3, 6, 3, 5, 2, 10, 3, 10, 5, 3, -1, -1, -1, -1 },
-	{ 5, 8, 9, 5, 2, 8, 5, 6, 2, 3, 8, 2, -1, -1, -1, -1 },
-	{ 9, 5, 6, 9, 6, 0, 0, 6, 2, -1, -1, -1, -1, -1, -1, -1 },
-	{ 1, 5, 8, 1, 8, 0, 5, 6, 8, 3, 8, 2, 6, 2, 8, -1 },
-	{ 1, 5, 6, 2, 1, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 1, 3, 6, 1, 6, 10, 3, 8, 6, 5, 6, 9, 8, 9, 6, -1 },
-	{ 10, 1, 0, 10, 0, 6, 9, 5, 0, 5, 6, 0, -1, -1, -1, -1 },
-	{ 0, 3, 8, 5, 6, 10, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 10, 5, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 11, 5, 10, 7, 5, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 11, 5, 10, 11, 7, 5, 8, 3, 0, -1, -1, -1, -1, -1, -1, -1 },
-	{ 5, 11, 7, 5, 10, 11, 1, 9, 0, -1, -1, -1, -1, -1, -1, -1 },
-	{ 10, 7, 5, 10, 11, 7, 9, 8, 1, 8, 3, 1, -1, -1, -1, -1 },
-	{ 11, 1, 2, 11, 7, 1, 7, 5, 1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 0, 8, 3, 1, 2, 7, 1, 7, 5, 7, 2, 11, -1, -1, -1, -1 },
-	{ 9, 7, 5, 9, 2, 7, 9, 0, 2, 2, 11, 7, -1, -1, -1, -1 },
-	{ 7, 5, 2, 7, 2, 11, 5, 9, 2, 3, 2, 8, 9, 8, 2, -1 },
-	{ 2, 5, 10, 2, 3, 5, 3, 7, 5, -1, -1, -1, -1, -1, -1, -1 },
-	{ 8, 2, 0, 8, 5, 2, 8, 7, 5, 10, 2, 5, -1, -1, -1, -1 },
-	{ 9, 0, 1, 5, 10, 3, 5, 3, 7, 3, 10, 2, -1, -1, -1, -1 },
-	{ 9, 8, 2, 9, 2, 1, 8, 7, 2, 10, 2, 5, 7, 5, 2, -1 },
-	{ 1, 3, 5, 3, 7, 5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 0, 8, 7, 0, 7, 1, 1, 7, 5, -1, -1, -1, -1, -1, -1, -1 },
-	{ 9, 0, 3, 9, 3, 5, 5, 3, 7, -1, -1, -1, -1, -1, -1, -1 },
-	{ 9, 8, 7, 5, 9, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 5, 8, 4, 5, 10, 8, 10, 11, 8, -1, -1, -1, -1, -1, -1, -1 },
-	{ 5, 0, 4, 5, 11, 0, 5, 10, 11, 11, 3, 0, -1, -1, -1, -1 },
-	{ 0, 1, 9, 8, 4, 10, 8, 10, 11, 10, 4, 5, -1, -1, -1, -1 },
-	{ 10, 11, 4, 10, 4, 5, 11, 3, 4, 9, 4, 1, 3, 1, 4, -1 },
-	{ 2, 5, 1, 2, 8, 5, 2, 11, 8, 4, 5, 8, -1, -1, -1, -1 },
-	{ 0, 4, 11, 0, 11, 3, 4, 5, 11, 2, 11, 1, 5, 1, 11, -1 },
-	{ 0, 2, 5, 0, 5, 9, 2, 11, 5, 4, 5, 8, 11, 8, 5, -1 },
-	{ 9, 4, 5, 2, 11, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 2, 5, 10, 3, 5, 2, 3, 4, 5, 3, 8, 4, -1, -1, -1, -1 },
-	{ 5, 10, 2, 5, 2, 4, 4, 2, 0, -1, -1, -1, -1, -1, -1, -1 },
-	{ 3, 10, 2, 3, 5, 10, 3, 8, 5, 4, 5, 8, 0, 1, 9, -1 },
-	{ 5, 10, 2, 5, 2, 4, 1, 9, 2, 9, 4, 2, -1, -1, -1, -1 },
-	{ 8, 4, 5, 8, 5, 3, 3, 5, 1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 0, 4, 5, 1, 0, 5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 8, 4, 5, 8, 5, 3, 9, 0, 5, 0, 3, 5, -1, -1, -1, -1 },
-	{ 9, 4, 5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 4, 11, 7, 4, 9, 11, 9, 10, 11, -1, -1, -1, -1, -1, -1, -1 },
-	{ 0, 8, 3, 4, 9, 7, 9, 11, 7, 9, 10, 11, -1, -1, -1, -1 },
-	{ 1, 10, 11, 1, 11, 4, 1, 4, 0, 7, 4, 11, -1, -1, -1, -1 },
-	{ 3, 1, 4, 3, 4, 8, 1, 10, 4, 7, 4, 11, 10, 11, 4, -1 },
-	{ 4, 11, 7, 9, 11, 4, 9, 2, 11, 9, 1, 2, -1, -1, -1, -1 },
-	{ 9, 7, 4, 9, 11, 7, 9, 1, 11, 2, 11, 1, 0, 8, 3, -1 },
-	{ 11, 7, 4, 11, 4, 2, 2, 4, 0, -1, -1, -1, -1, -1, -1, -1 },
-	{ 11, 7, 4, 11, 4, 2, 8, 3, 4, 3, 2, 4, -1, -1, -1, -1 },
-	{ 2, 9, 10, 2, 7, 9, 2, 3, 7, 7, 4, 9, -1, -1, -1, -1 },
-	{ 9, 10, 7, 9, 7, 4, 10, 2, 7, 8, 7, 0, 2, 0, 7, -1 },
-	{ 3, 7, 10, 3, 10, 2, 7, 4, 10, 1, 10, 0, 4, 0, 10, -1 },
-	{ 1, 10, 2, 8, 7, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 4, 9, 1, 4, 1, 7, 7, 1, 3, -1, -1, -1, -1, -1, -1, -1 },
-	{ 4, 9, 1, 4, 1, 7, 0, 8, 1, 8, 7, 1, -1, -1, -1, -1 },
-	{ 4, 0, 3, 7, 4, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 4, 8, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 9, 10, 8, 10, 11, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 3, 0, 9, 3, 9, 11, 11, 9, 10, -1, -1, -1, -1, -1, -1, -1 },
-	{ 0, 1, 10, 0, 10, 8, 8, 10, 11, -1, -1, -1, -1, -1, -1, -1 },
-	{ 3, 1, 10, 11, 3, 10, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 1, 2, 11, 1, 11, 9, 9, 11, 8, -1, -1, -1, -1, -1, -1, -1 },
-	{ 3, 0, 9, 3, 9, 11, 1, 2, 9, 2, 11, 9, -1, -1, -1, -1 },
-	{ 0, 2, 11, 8, 0, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 3, 2, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 2, 3, 8, 2, 8, 10, 10, 8, 9, -1, -1, -1, -1, -1, -1, -1 },
-	{ 9, 10, 2, 0, 9, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 2, 3, 8, 2, 8, 10, 0, 1, 8, 1, 10, 8, -1, -1, -1, -1 },
-	{ 1, 10, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 1, 3, 8, 9, 1, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 0, 9, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ 0, 3, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 },
-	{ -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1 } };
+int Polygonise(GRIDCELL grid, double isolevel, TRIANGLE *triangles) {
+  int i, ntriang;
+  int cubeindex;
+  XYZ vertlist[12];
 
-	/*
-	Determine the index into the edge table which
-	tells us which vertices are inside of the surface
-	*/
-	cubeindex = 0;
-	double isolevel = *argv[2];
+  int edgeTable[256] = {
+      0x0,   0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c, 0x80c, 0x905,
+      0xa0f, 0xb06, 0xc0a, 0xd03, 0xe09, 0xf00, 0x190, 0x99,  0x393, 0x29a,
+      0x596, 0x49f, 0x795, 0x69c, 0x99c, 0x895, 0xb9f, 0xa96, 0xd9a, 0xc93,
+      0xf99, 0xe90, 0x230, 0x339, 0x33,  0x13a, 0x636, 0x73f, 0x435, 0x53c,
+      0xa3c, 0xb35, 0x83f, 0x936, 0xe3a, 0xf33, 0xc39, 0xd30, 0x3a0, 0x2a9,
+      0x1a3, 0xaa,  0x7a6, 0x6af, 0x5a5, 0x4ac, 0xbac, 0xaa5, 0x9af, 0x8a6,
+      0xfaa, 0xea3, 0xda9, 0xca0, 0x460, 0x569, 0x663, 0x76a, 0x66,  0x16f,
+      0x265, 0x36c, 0xc6c, 0xd65, 0xe6f, 0xf66, 0x86a, 0x963, 0xa69, 0xb60,
+      0x5f0, 0x4f9, 0x7f3, 0x6fa, 0x1f6, 0xff,  0x3f5, 0x2fc, 0xdfc, 0xcf5,
+      0xfff, 0xef6, 0x9fa, 0x8f3, 0xbf9, 0xaf0, 0x650, 0x759, 0x453, 0x55a,
+      0x256, 0x35f, 0x55,  0x15c, 0xe5c, 0xf55, 0xc5f, 0xd56, 0xa5a, 0xb53,
+      0x859, 0x950, 0x7c0, 0x6c9, 0x5c3, 0x4ca, 0x3c6, 0x2cf, 0x1c5, 0xcc,
+      0xfcc, 0xec5, 0xdcf, 0xcc6, 0xbca, 0xac3, 0x9c9, 0x8c0, 0x8c0, 0x9c9,
+      0xac3, 0xbca, 0xcc6, 0xdcf, 0xec5, 0xfcc, 0xcc,  0x1c5, 0x2cf, 0x3c6,
+      0x4ca, 0x5c3, 0x6c9, 0x7c0, 0x950, 0x859, 0xb53, 0xa5a, 0xd56, 0xc5f,
+      0xf55, 0xe5c, 0x15c, 0x55,  0x35f, 0x256, 0x55a, 0x453, 0x759, 0x650,
+      0xaf0, 0xbf9, 0x8f3, 0x9fa, 0xef6, 0xfff, 0xcf5, 0xdfc, 0x2fc, 0x3f5,
+      0xff,  0x1f6, 0x6fa, 0x7f3, 0x4f9, 0x5f0, 0xb60, 0xa69, 0x963, 0x86a,
+      0xf66, 0xe6f, 0xd65, 0xc6c, 0x36c, 0x265, 0x16f, 0x66,  0x76a, 0x663,
+      0x569, 0x460, 0xca0, 0xda9, 0xea3, 0xfaa, 0x8a6, 0x9af, 0xaa5, 0xbac,
+      0x4ac, 0x5a5, 0x6af, 0x7a6, 0xaa,  0x1a3, 0x2a9, 0x3a0, 0xd30, 0xc39,
+      0xf33, 0xe3a, 0x936, 0x83f, 0xb35, 0xa3c, 0x53c, 0x435, 0x73f, 0x636,
+      0x13a, 0x33,  0x339, 0x230, 0xe90, 0xf99, 0xc93, 0xd9a, 0xa96, 0xb9f,
+      0x895, 0x99c, 0x69c, 0x795, 0x49f, 0x596, 0x29a, 0x393, 0x99,  0x190,
+      0xf00, 0xe09, 0xd03, 0xc0a, 0xb06, 0xa0f, 0x905, 0x80c, 0x70c, 0x605,
+      0x50f, 0x406, 0x30a, 0x203, 0x109, 0x0};
+  int triTable[256][16] = {
+      {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {0, 1, 9, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {1, 8, 3, 9, 8, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {1, 2, 10, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {0, 8, 3, 1, 2, 10, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {9, 2, 10, 0, 2, 9, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {2, 8, 3, 2, 10, 8, 10, 9, 8, -1, -1, -1, -1, -1, -1, -1},
+      {3, 11, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {0, 11, 2, 8, 11, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {1, 9, 0, 2, 3, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {1, 11, 2, 1, 9, 11, 9, 8, 11, -1, -1, -1, -1, -1, -1, -1},
+      {3, 10, 1, 11, 10, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {0, 10, 1, 0, 8, 10, 8, 11, 10, -1, -1, -1, -1, -1, -1, -1},
+      {3, 9, 0, 3, 11, 9, 11, 10, 9, -1, -1, -1, -1, -1, -1, -1},
+      {9, 8, 10, 10, 8, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {4, 7, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {4, 3, 0, 7, 3, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {0, 1, 9, 8, 4, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {4, 1, 9, 4, 7, 1, 7, 3, 1, -1, -1, -1, -1, -1, -1, -1},
+      {1, 2, 10, 8, 4, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {3, 4, 7, 3, 0, 4, 1, 2, 10, -1, -1, -1, -1, -1, -1, -1},
+      {9, 2, 10, 9, 0, 2, 8, 4, 7, -1, -1, -1, -1, -1, -1, -1},
+      {2, 10, 9, 2, 9, 7, 2, 7, 3, 7, 9, 4, -1, -1, -1, -1},
+      {8, 4, 7, 3, 11, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {11, 4, 7, 11, 2, 4, 2, 0, 4, -1, -1, -1, -1, -1, -1, -1},
+      {9, 0, 1, 8, 4, 7, 2, 3, 11, -1, -1, -1, -1, -1, -1, -1},
+      {4, 7, 11, 9, 4, 11, 9, 11, 2, 9, 2, 1, -1, -1, -1, -1},
+      {3, 10, 1, 3, 11, 10, 7, 8, 4, -1, -1, -1, -1, -1, -1, -1},
+      {1, 11, 10, 1, 4, 11, 1, 0, 4, 7, 11, 4, -1, -1, -1, -1},
+      {4, 7, 8, 9, 0, 11, 9, 11, 10, 11, 0, 3, -1, -1, -1, -1},
+      {4, 7, 11, 4, 11, 9, 9, 11, 10, -1, -1, -1, -1, -1, -1, -1},
+      {9, 5, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {9, 5, 4, 0, 8, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {0, 5, 4, 1, 5, 0, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {8, 5, 4, 8, 3, 5, 3, 1, 5, -1, -1, -1, -1, -1, -1, -1},
+      {1, 2, 10, 9, 5, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {3, 0, 8, 1, 2, 10, 4, 9, 5, -1, -1, -1, -1, -1, -1, -1},
+      {5, 2, 10, 5, 4, 2, 4, 0, 2, -1, -1, -1, -1, -1, -1, -1},
+      {2, 10, 5, 3, 2, 5, 3, 5, 4, 3, 4, 8, -1, -1, -1, -1},
+      {9, 5, 4, 2, 3, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {0, 11, 2, 0, 8, 11, 4, 9, 5, -1, -1, -1, -1, -1, -1, -1},
+      {0, 5, 4, 0, 1, 5, 2, 3, 11, -1, -1, -1, -1, -1, -1, -1},
+      {2, 1, 5, 2, 5, 8, 2, 8, 11, 4, 8, 5, -1, -1, -1, -1},
+      {10, 3, 11, 10, 1, 3, 9, 5, 4, -1, -1, -1, -1, -1, -1, -1},
+      {4, 9, 5, 0, 8, 1, 8, 10, 1, 8, 11, 10, -1, -1, -1, -1},
+      {5, 4, 0, 5, 0, 11, 5, 11, 10, 11, 0, 3, -1, -1, -1, -1},
+      {5, 4, 8, 5, 8, 10, 10, 8, 11, -1, -1, -1, -1, -1, -1, -1},
+      {9, 7, 8, 5, 7, 9, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {9, 3, 0, 9, 5, 3, 5, 7, 3, -1, -1, -1, -1, -1, -1, -1},
+      {0, 7, 8, 0, 1, 7, 1, 5, 7, -1, -1, -1, -1, -1, -1, -1},
+      {1, 5, 3, 3, 5, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {9, 7, 8, 9, 5, 7, 10, 1, 2, -1, -1, -1, -1, -1, -1, -1},
+      {10, 1, 2, 9, 5, 0, 5, 3, 0, 5, 7, 3, -1, -1, -1, -1},
+      {8, 0, 2, 8, 2, 5, 8, 5, 7, 10, 5, 2, -1, -1, -1, -1},
+      {2, 10, 5, 2, 5, 3, 3, 5, 7, -1, -1, -1, -1, -1, -1, -1},
+      {7, 9, 5, 7, 8, 9, 3, 11, 2, -1, -1, -1, -1, -1, -1, -1},
+      {9, 5, 7, 9, 7, 2, 9, 2, 0, 2, 7, 11, -1, -1, -1, -1},
+      {2, 3, 11, 0, 1, 8, 1, 7, 8, 1, 5, 7, -1, -1, -1, -1},
+      {11, 2, 1, 11, 1, 7, 7, 1, 5, -1, -1, -1, -1, -1, -1, -1},
+      {9, 5, 8, 8, 5, 7, 10, 1, 3, 10, 3, 11, -1, -1, -1, -1},
+      {5, 7, 0, 5, 0, 9, 7, 11, 0, 1, 0, 10, 11, 10, 0, -1},
+      {11, 10, 0, 11, 0, 3, 10, 5, 0, 8, 0, 7, 5, 7, 0, -1},
+      {11, 10, 5, 7, 11, 5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {10, 6, 5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {0, 8, 3, 5, 10, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {9, 0, 1, 5, 10, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {1, 8, 3, 1, 9, 8, 5, 10, 6, -1, -1, -1, -1, -1, -1, -1},
+      {1, 6, 5, 2, 6, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {1, 6, 5, 1, 2, 6, 3, 0, 8, -1, -1, -1, -1, -1, -1, -1},
+      {9, 6, 5, 9, 0, 6, 0, 2, 6, -1, -1, -1, -1, -1, -1, -1},
+      {5, 9, 8, 5, 8, 2, 5, 2, 6, 3, 2, 8, -1, -1, -1, -1},
+      {2, 3, 11, 10, 6, 5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {11, 0, 8, 11, 2, 0, 10, 6, 5, -1, -1, -1, -1, -1, -1, -1},
+      {0, 1, 9, 2, 3, 11, 5, 10, 6, -1, -1, -1, -1, -1, -1, -1},
+      {5, 10, 6, 1, 9, 2, 9, 11, 2, 9, 8, 11, -1, -1, -1, -1},
+      {6, 3, 11, 6, 5, 3, 5, 1, 3, -1, -1, -1, -1, -1, -1, -1},
+      {0, 8, 11, 0, 11, 5, 0, 5, 1, 5, 11, 6, -1, -1, -1, -1},
+      {3, 11, 6, 0, 3, 6, 0, 6, 5, 0, 5, 9, -1, -1, -1, -1},
+      {6, 5, 9, 6, 9, 11, 11, 9, 8, -1, -1, -1, -1, -1, -1, -1},
+      {5, 10, 6, 4, 7, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {4, 3, 0, 4, 7, 3, 6, 5, 10, -1, -1, -1, -1, -1, -1, -1},
+      {1, 9, 0, 5, 10, 6, 8, 4, 7, -1, -1, -1, -1, -1, -1, -1},
+      {10, 6, 5, 1, 9, 7, 1, 7, 3, 7, 9, 4, -1, -1, -1, -1},
+      {6, 1, 2, 6, 5, 1, 4, 7, 8, -1, -1, -1, -1, -1, -1, -1},
+      {1, 2, 5, 5, 2, 6, 3, 0, 4, 3, 4, 7, -1, -1, -1, -1},
+      {8, 4, 7, 9, 0, 5, 0, 6, 5, 0, 2, 6, -1, -1, -1, -1},
+      {7, 3, 9, 7, 9, 4, 3, 2, 9, 5, 9, 6, 2, 6, 9, -1},
+      {3, 11, 2, 7, 8, 4, 10, 6, 5, -1, -1, -1, -1, -1, -1, -1},
+      {5, 10, 6, 4, 7, 2, 4, 2, 0, 2, 7, 11, -1, -1, -1, -1},
+      {0, 1, 9, 4, 7, 8, 2, 3, 11, 5, 10, 6, -1, -1, -1, -1},
+      {9, 2, 1, 9, 11, 2, 9, 4, 11, 7, 11, 4, 5, 10, 6, -1},
+      {8, 4, 7, 3, 11, 5, 3, 5, 1, 5, 11, 6, -1, -1, -1, -1},
+      {5, 1, 11, 5, 11, 6, 1, 0, 11, 7, 11, 4, 0, 4, 11, -1},
+      {0, 5, 9, 0, 6, 5, 0, 3, 6, 11, 6, 3, 8, 4, 7, -1},
+      {6, 5, 9, 6, 9, 11, 4, 7, 9, 7, 11, 9, -1, -1, -1, -1},
+      {10, 4, 9, 6, 4, 10, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {4, 10, 6, 4, 9, 10, 0, 8, 3, -1, -1, -1, -1, -1, -1, -1},
+      {10, 0, 1, 10, 6, 0, 6, 4, 0, -1, -1, -1, -1, -1, -1, -1},
+      {8, 3, 1, 8, 1, 6, 8, 6, 4, 6, 1, 10, -1, -1, -1, -1},
+      {1, 4, 9, 1, 2, 4, 2, 6, 4, -1, -1, -1, -1, -1, -1, -1},
+      {3, 0, 8, 1, 2, 9, 2, 4, 9, 2, 6, 4, -1, -1, -1, -1},
+      {0, 2, 4, 4, 2, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {8, 3, 2, 8, 2, 4, 4, 2, 6, -1, -1, -1, -1, -1, -1, -1},
+      {10, 4, 9, 10, 6, 4, 11, 2, 3, -1, -1, -1, -1, -1, -1, -1},
+      {0, 8, 2, 2, 8, 11, 4, 9, 10, 4, 10, 6, -1, -1, -1, -1},
+      {3, 11, 2, 0, 1, 6, 0, 6, 4, 6, 1, 10, -1, -1, -1, -1},
+      {6, 4, 1, 6, 1, 10, 4, 8, 1, 2, 1, 11, 8, 11, 1, -1},
+      {9, 6, 4, 9, 3, 6, 9, 1, 3, 11, 6, 3, -1, -1, -1, -1},
+      {8, 11, 1, 8, 1, 0, 11, 6, 1, 9, 1, 4, 6, 4, 1, -1},
+      {3, 11, 6, 3, 6, 0, 0, 6, 4, -1, -1, -1, -1, -1, -1, -1},
+      {6, 4, 8, 11, 6, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {7, 10, 6, 7, 8, 10, 8, 9, 10, -1, -1, -1, -1, -1, -1, -1},
+      {0, 7, 3, 0, 10, 7, 0, 9, 10, 6, 7, 10, -1, -1, -1, -1},
+      {10, 6, 7, 1, 10, 7, 1, 7, 8, 1, 8, 0, -1, -1, -1, -1},
+      {10, 6, 7, 10, 7, 1, 1, 7, 3, -1, -1, -1, -1, -1, -1, -1},
+      {1, 2, 6, 1, 6, 8, 1, 8, 9, 8, 6, 7, -1, -1, -1, -1},
+      {2, 6, 9, 2, 9, 1, 6, 7, 9, 0, 9, 3, 7, 3, 9, -1},
+      {7, 8, 0, 7, 0, 6, 6, 0, 2, -1, -1, -1, -1, -1, -1, -1},
+      {7, 3, 2, 6, 7, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {2, 3, 11, 10, 6, 8, 10, 8, 9, 8, 6, 7, -1, -1, -1, -1},
+      {2, 0, 7, 2, 7, 11, 0, 9, 7, 6, 7, 10, 9, 10, 7, -1},
+      {1, 8, 0, 1, 7, 8, 1, 10, 7, 6, 7, 10, 2, 3, 11, -1},
+      {11, 2, 1, 11, 1, 7, 10, 6, 1, 6, 7, 1, -1, -1, -1, -1},
+      {8, 9, 6, 8, 6, 7, 9, 1, 6, 11, 6, 3, 1, 3, 6, -1},
+      {0, 9, 1, 11, 6, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {7, 8, 0, 7, 0, 6, 3, 11, 0, 11, 6, 0, -1, -1, -1, -1},
+      {7, 11, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {7, 6, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {3, 0, 8, 11, 7, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {0, 1, 9, 11, 7, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {8, 1, 9, 8, 3, 1, 11, 7, 6, -1, -1, -1, -1, -1, -1, -1},
+      {10, 1, 2, 6, 11, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {1, 2, 10, 3, 0, 8, 6, 11, 7, -1, -1, -1, -1, -1, -1, -1},
+      {2, 9, 0, 2, 10, 9, 6, 11, 7, -1, -1, -1, -1, -1, -1, -1},
+      {6, 11, 7, 2, 10, 3, 10, 8, 3, 10, 9, 8, -1, -1, -1, -1},
+      {7, 2, 3, 6, 2, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {7, 0, 8, 7, 6, 0, 6, 2, 0, -1, -1, -1, -1, -1, -1, -1},
+      {2, 7, 6, 2, 3, 7, 0, 1, 9, -1, -1, -1, -1, -1, -1, -1},
+      {1, 6, 2, 1, 8, 6, 1, 9, 8, 8, 7, 6, -1, -1, -1, -1},
+      {10, 7, 6, 10, 1, 7, 1, 3, 7, -1, -1, -1, -1, -1, -1, -1},
+      {10, 7, 6, 1, 7, 10, 1, 8, 7, 1, 0, 8, -1, -1, -1, -1},
+      {0, 3, 7, 0, 7, 10, 0, 10, 9, 6, 10, 7, -1, -1, -1, -1},
+      {7, 6, 10, 7, 10, 8, 8, 10, 9, -1, -1, -1, -1, -1, -1, -1},
+      {6, 8, 4, 11, 8, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {3, 6, 11, 3, 0, 6, 0, 4, 6, -1, -1, -1, -1, -1, -1, -1},
+      {8, 6, 11, 8, 4, 6, 9, 0, 1, -1, -1, -1, -1, -1, -1, -1},
+      {9, 4, 6, 9, 6, 3, 9, 3, 1, 11, 3, 6, -1, -1, -1, -1},
+      {6, 8, 4, 6, 11, 8, 2, 10, 1, -1, -1, -1, -1, -1, -1, -1},
+      {1, 2, 10, 3, 0, 11, 0, 6, 11, 0, 4, 6, -1, -1, -1, -1},
+      {4, 11, 8, 4, 6, 11, 0, 2, 9, 2, 10, 9, -1, -1, -1, -1},
+      {10, 9, 3, 10, 3, 2, 9, 4, 3, 11, 3, 6, 4, 6, 3, -1},
+      {8, 2, 3, 8, 4, 2, 4, 6, 2, -1, -1, -1, -1, -1, -1, -1},
+      {0, 4, 2, 4, 6, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {1, 9, 0, 2, 3, 4, 2, 4, 6, 4, 3, 8, -1, -1, -1, -1},
+      {1, 9, 4, 1, 4, 2, 2, 4, 6, -1, -1, -1, -1, -1, -1, -1},
+      {8, 1, 3, 8, 6, 1, 8, 4, 6, 6, 10, 1, -1, -1, -1, -1},
+      {10, 1, 0, 10, 0, 6, 6, 0, 4, -1, -1, -1, -1, -1, -1, -1},
+      {4, 6, 3, 4, 3, 8, 6, 10, 3, 0, 3, 9, 10, 9, 3, -1},
+      {10, 9, 4, 6, 10, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {4, 9, 5, 7, 6, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {0, 8, 3, 4, 9, 5, 11, 7, 6, -1, -1, -1, -1, -1, -1, -1},
+      {5, 0, 1, 5, 4, 0, 7, 6, 11, -1, -1, -1, -1, -1, -1, -1},
+      {11, 7, 6, 8, 3, 4, 3, 5, 4, 3, 1, 5, -1, -1, -1, -1},
+      {9, 5, 4, 10, 1, 2, 7, 6, 11, -1, -1, -1, -1, -1, -1, -1},
+      {6, 11, 7, 1, 2, 10, 0, 8, 3, 4, 9, 5, -1, -1, -1, -1},
+      {7, 6, 11, 5, 4, 10, 4, 2, 10, 4, 0, 2, -1, -1, -1, -1},
+      {3, 4, 8, 3, 5, 4, 3, 2, 5, 10, 5, 2, 11, 7, 6, -1},
+      {7, 2, 3, 7, 6, 2, 5, 4, 9, -1, -1, -1, -1, -1, -1, -1},
+      {9, 5, 4, 0, 8, 6, 0, 6, 2, 6, 8, 7, -1, -1, -1, -1},
+      {3, 6, 2, 3, 7, 6, 1, 5, 0, 5, 4, 0, -1, -1, -1, -1},
+      {6, 2, 8, 6, 8, 7, 2, 1, 8, 4, 8, 5, 1, 5, 8, -1},
+      {9, 5, 4, 10, 1, 6, 1, 7, 6, 1, 3, 7, -1, -1, -1, -1},
+      {1, 6, 10, 1, 7, 6, 1, 0, 7, 8, 7, 0, 9, 5, 4, -1},
+      {4, 0, 10, 4, 10, 5, 0, 3, 10, 6, 10, 7, 3, 7, 10, -1},
+      {7, 6, 10, 7, 10, 8, 5, 4, 10, 4, 8, 10, -1, -1, -1, -1},
+      {6, 9, 5, 6, 11, 9, 11, 8, 9, -1, -1, -1, -1, -1, -1, -1},
+      {3, 6, 11, 0, 6, 3, 0, 5, 6, 0, 9, 5, -1, -1, -1, -1},
+      {0, 11, 8, 0, 5, 11, 0, 1, 5, 5, 6, 11, -1, -1, -1, -1},
+      {6, 11, 3, 6, 3, 5, 5, 3, 1, -1, -1, -1, -1, -1, -1, -1},
+      {1, 2, 10, 9, 5, 11, 9, 11, 8, 11, 5, 6, -1, -1, -1, -1},
+      {0, 11, 3, 0, 6, 11, 0, 9, 6, 5, 6, 9, 1, 2, 10, -1},
+      {11, 8, 5, 11, 5, 6, 8, 0, 5, 10, 5, 2, 0, 2, 5, -1},
+      {6, 11, 3, 6, 3, 5, 2, 10, 3, 10, 5, 3, -1, -1, -1, -1},
+      {5, 8, 9, 5, 2, 8, 5, 6, 2, 3, 8, 2, -1, -1, -1, -1},
+      {9, 5, 6, 9, 6, 0, 0, 6, 2, -1, -1, -1, -1, -1, -1, -1},
+      {1, 5, 8, 1, 8, 0, 5, 6, 8, 3, 8, 2, 6, 2, 8, -1},
+      {1, 5, 6, 2, 1, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {1, 3, 6, 1, 6, 10, 3, 8, 6, 5, 6, 9, 8, 9, 6, -1},
+      {10, 1, 0, 10, 0, 6, 9, 5, 0, 5, 6, 0, -1, -1, -1, -1},
+      {0, 3, 8, 5, 6, 10, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {10, 5, 6, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {11, 5, 10, 7, 5, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {11, 5, 10, 11, 7, 5, 8, 3, 0, -1, -1, -1, -1, -1, -1, -1},
+      {5, 11, 7, 5, 10, 11, 1, 9, 0, -1, -1, -1, -1, -1, -1, -1},
+      {10, 7, 5, 10, 11, 7, 9, 8, 1, 8, 3, 1, -1, -1, -1, -1},
+      {11, 1, 2, 11, 7, 1, 7, 5, 1, -1, -1, -1, -1, -1, -1, -1},
+      {0, 8, 3, 1, 2, 7, 1, 7, 5, 7, 2, 11, -1, -1, -1, -1},
+      {9, 7, 5, 9, 2, 7, 9, 0, 2, 2, 11, 7, -1, -1, -1, -1},
+      {7, 5, 2, 7, 2, 11, 5, 9, 2, 3, 2, 8, 9, 8, 2, -1},
+      {2, 5, 10, 2, 3, 5, 3, 7, 5, -1, -1, -1, -1, -1, -1, -1},
+      {8, 2, 0, 8, 5, 2, 8, 7, 5, 10, 2, 5, -1, -1, -1, -1},
+      {9, 0, 1, 5, 10, 3, 5, 3, 7, 3, 10, 2, -1, -1, -1, -1},
+      {9, 8, 2, 9, 2, 1, 8, 7, 2, 10, 2, 5, 7, 5, 2, -1},
+      {1, 3, 5, 3, 7, 5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {0, 8, 7, 0, 7, 1, 1, 7, 5, -1, -1, -1, -1, -1, -1, -1},
+      {9, 0, 3, 9, 3, 5, 5, 3, 7, -1, -1, -1, -1, -1, -1, -1},
+      {9, 8, 7, 5, 9, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {5, 8, 4, 5, 10, 8, 10, 11, 8, -1, -1, -1, -1, -1, -1, -1},
+      {5, 0, 4, 5, 11, 0, 5, 10, 11, 11, 3, 0, -1, -1, -1, -1},
+      {0, 1, 9, 8, 4, 10, 8, 10, 11, 10, 4, 5, -1, -1, -1, -1},
+      {10, 11, 4, 10, 4, 5, 11, 3, 4, 9, 4, 1, 3, 1, 4, -1},
+      {2, 5, 1, 2, 8, 5, 2, 11, 8, 4, 5, 8, -1, -1, -1, -1},
+      {0, 4, 11, 0, 11, 3, 4, 5, 11, 2, 11, 1, 5, 1, 11, -1},
+      {0, 2, 5, 0, 5, 9, 2, 11, 5, 4, 5, 8, 11, 8, 5, -1},
+      {9, 4, 5, 2, 11, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {2, 5, 10, 3, 5, 2, 3, 4, 5, 3, 8, 4, -1, -1, -1, -1},
+      {5, 10, 2, 5, 2, 4, 4, 2, 0, -1, -1, -1, -1, -1, -1, -1},
+      {3, 10, 2, 3, 5, 10, 3, 8, 5, 4, 5, 8, 0, 1, 9, -1},
+      {5, 10, 2, 5, 2, 4, 1, 9, 2, 9, 4, 2, -1, -1, -1, -1},
+      {8, 4, 5, 8, 5, 3, 3, 5, 1, -1, -1, -1, -1, -1, -1, -1},
+      {0, 4, 5, 1, 0, 5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {8, 4, 5, 8, 5, 3, 9, 0, 5, 0, 3, 5, -1, -1, -1, -1},
+      {9, 4, 5, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {4, 11, 7, 4, 9, 11, 9, 10, 11, -1, -1, -1, -1, -1, -1, -1},
+      {0, 8, 3, 4, 9, 7, 9, 11, 7, 9, 10, 11, -1, -1, -1, -1},
+      {1, 10, 11, 1, 11, 4, 1, 4, 0, 7, 4, 11, -1, -1, -1, -1},
+      {3, 1, 4, 3, 4, 8, 1, 10, 4, 7, 4, 11, 10, 11, 4, -1},
+      {4, 11, 7, 9, 11, 4, 9, 2, 11, 9, 1, 2, -1, -1, -1, -1},
+      {9, 7, 4, 9, 11, 7, 9, 1, 11, 2, 11, 1, 0, 8, 3, -1},
+      {11, 7, 4, 11, 4, 2, 2, 4, 0, -1, -1, -1, -1, -1, -1, -1},
+      {11, 7, 4, 11, 4, 2, 8, 3, 4, 3, 2, 4, -1, -1, -1, -1},
+      {2, 9, 10, 2, 7, 9, 2, 3, 7, 7, 4, 9, -1, -1, -1, -1},
+      {9, 10, 7, 9, 7, 4, 10, 2, 7, 8, 7, 0, 2, 0, 7, -1},
+      {3, 7, 10, 3, 10, 2, 7, 4, 10, 1, 10, 0, 4, 0, 10, -1},
+      {1, 10, 2, 8, 7, 4, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {4, 9, 1, 4, 1, 7, 7, 1, 3, -1, -1, -1, -1, -1, -1, -1},
+      {4, 9, 1, 4, 1, 7, 0, 8, 1, 8, 7, 1, -1, -1, -1, -1},
+      {4, 0, 3, 7, 4, 3, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {4, 8, 7, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {9, 10, 8, 10, 11, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {3, 0, 9, 3, 9, 11, 11, 9, 10, -1, -1, -1, -1, -1, -1, -1},
+      {0, 1, 10, 0, 10, 8, 8, 10, 11, -1, -1, -1, -1, -1, -1, -1},
+      {3, 1, 10, 11, 3, 10, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {1, 2, 11, 1, 11, 9, 9, 11, 8, -1, -1, -1, -1, -1, -1, -1},
+      {3, 0, 9, 3, 9, 11, 1, 2, 9, 2, 11, 9, -1, -1, -1, -1},
+      {0, 2, 11, 8, 0, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {3, 2, 11, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {2, 3, 8, 2, 8, 10, 10, 8, 9, -1, -1, -1, -1, -1, -1, -1},
+      {9, 10, 2, 0, 9, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {2, 3, 8, 2, 8, 10, 0, 1, 8, 1, 10, 8, -1, -1, -1, -1},
+      {1, 10, 2, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {1, 3, 8, 9, 1, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {0, 9, 1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {0, 3, 8, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1},
+      {-1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1}};
 
-	if (grid.val[0] < isolevel) cubeindex |= 1;
-	if (grid.val[1] < isolevel) cubeindex |= 2;
-	if (grid.val[2] < isolevel) cubeindex |= 4;
-	if (grid.val[3] < isolevel) cubeindex |= 8;
-	if (grid.val[4] < isolevel) cubeindex |= 16;
-	if (grid.val[5] < isolevel) cubeindex |= 32;
-	if (grid.val[6] < isolevel) cubeindex |= 64;
-	if (grid.val[7] < isolevel) cubeindex |= 128;
+  /*
+  Determine the index into the edge table which
+  tells us which vertices are inside of the surface
+  */
+  cubeindex = 0;
 
-	/* Cube is entirely in/out of the surface */
-	if (edgeTable[cubeindex] == 0)
-		return(0);
+  if (grid.val[0] < isolevel)
+    cubeindex |= 1;
+  if (grid.val[1] < isolevel)
+    cubeindex |= 2;
+  if (grid.val[2] < isolevel)
+    cubeindex |= 4;
+  if (grid.val[3] < isolevel)
+    cubeindex |= 8;
+  if (grid.val[4] < isolevel)
+    cubeindex |= 16;
+  if (grid.val[5] < isolevel)
+    cubeindex |= 32;
+  if (grid.val[6] < isolevel)
+    cubeindex |= 64;
+  if (grid.val[7] < isolevel)
+    cubeindex |= 128;
 
-	/* Find the vertices where the surface intersects the cube */
-	if (edgeTable[cubeindex] & 1)
-		vertlist[0] =
-		VertexInterp(isolevel, grid.p[0], grid.p[1], grid.val[0], grid.val[1]);
-	if (edgeTable[cubeindex] & 2)
-		vertlist[1] =
-		VertexInterp(isolevel, grid.p[1], grid.p[2], grid.val[1], grid.val[2]);
-	if (edgeTable[cubeindex] & 4)
-		vertlist[2] =
-		VertexInterp(isolevel, grid.p[2], grid.p[3], grid.val[2], grid.val[3]);
-	if (edgeTable[cubeindex] & 8)
-		vertlist[3] =
-		VertexInterp(isolevel, grid.p[3], grid.p[0], grid.val[3], grid.val[0]);
-	if (edgeTable[cubeindex] & 16)
-		vertlist[4] =
-		VertexInterp(isolevel, grid.p[4], grid.p[5], grid.val[4], grid.val[5]);
-	if (edgeTable[cubeindex] & 32)
-		vertlist[5] =
-		VertexInterp(isolevel, grid.p[5], grid.p[6], grid.val[5], grid.val[6]);
-	if (edgeTable[cubeindex] & 64)
-		vertlist[6] =
-		VertexInterp(isolevel, grid.p[6], grid.p[7], grid.val[6], grid.val[7]);
-	if (edgeTable[cubeindex] & 128)
-		vertlist[7] =
-		VertexInterp(isolevel, grid.p[7], grid.p[4], grid.val[7], grid.val[4]);
-	if (edgeTable[cubeindex] & 256)
-		vertlist[8] =
-		VertexInterp(isolevel, grid.p[0], grid.p[4], grid.val[0], grid.val[4]);
-	if (edgeTable[cubeindex] & 512)
-		vertlist[9] =
-		VertexInterp(isolevel, grid.p[1], grid.p[5], grid.val[1], grid.val[5]);
-	if (edgeTable[cubeindex] & 1024)
-		vertlist[10] =
-		VertexInterp(isolevel, grid.p[2], grid.p[6], grid.val[2], grid.val[6]);
-	if (edgeTable[cubeindex] & 2048)
-		vertlist[11] =
-		VertexInterp(isolevel, grid.p[3], grid.p[7], grid.val[3], grid.val[7]);
+  /* Cube is entirely in/out of the surface */
+  if (edgeTable[cubeindex] == 0)
+    return (0);
 
-	/* Create the triangle */
-	ntriang = 0;
-	for (i = 0; triTable[cubeindex][i] != -1; i += 3) {
-		triangles[ntriang].p[0] = vertlist[triTable[cubeindex][i]];
-		triangles[ntriang].p[1] = vertlist[triTable[cubeindex][i + 1]];
-		triangles[ntriang].p[2] = vertlist[triTable[cubeindex][i + 2]];
-		ntriang++;
-	}
+  /* Find the vertices where the surface intersects the cube */
+  if (edgeTable[cubeindex] & 1)
+    vertlist[0] =
+        VertexInterp(isolevel, grid.p[0], grid.p[1], grid.val[0], grid.val[1]);
+  if (edgeTable[cubeindex] & 2)
+    vertlist[1] =
+        VertexInterp(isolevel, grid.p[1], grid.p[2], grid.val[1], grid.val[2]);
+  if (edgeTable[cubeindex] & 4)
+    vertlist[2] =
+        VertexInterp(isolevel, grid.p[2], grid.p[3], grid.val[2], grid.val[3]);
+  if (edgeTable[cubeindex] & 8)
+    vertlist[3] =
+        VertexInterp(isolevel, grid.p[3], grid.p[0], grid.val[3], grid.val[0]);
+  if (edgeTable[cubeindex] & 16)
+    vertlist[4] =
+        VertexInterp(isolevel, grid.p[4], grid.p[5], grid.val[4], grid.val[5]);
+  if (edgeTable[cubeindex] & 32)
+    vertlist[5] =
+        VertexInterp(isolevel, grid.p[5], grid.p[6], grid.val[5], grid.val[6]);
+  if (edgeTable[cubeindex] & 64)
+    vertlist[6] =
+        VertexInterp(isolevel, grid.p[6], grid.p[7], grid.val[6], grid.val[7]);
+  if (edgeTable[cubeindex] & 128)
+    vertlist[7] =
+        VertexInterp(isolevel, grid.p[7], grid.p[4], grid.val[7], grid.val[4]);
+  if (edgeTable[cubeindex] & 256)
+    vertlist[8] =
+        VertexInterp(isolevel, grid.p[0], grid.p[4], grid.val[0], grid.val[4]);
+  if (edgeTable[cubeindex] & 512)
+    vertlist[9] =
+        VertexInterp(isolevel, grid.p[1], grid.p[5], grid.val[1], grid.val[5]);
+  if (edgeTable[cubeindex] & 1024)
+    vertlist[10] =
+        VertexInterp(isolevel, grid.p[2], grid.p[6], grid.val[2], grid.val[6]);
+  if (edgeTable[cubeindex] & 2048)
+    vertlist[11] =
+        VertexInterp(isolevel, grid.p[3], grid.p[7], grid.val[3], grid.val[7]);
 
-	return(ntriang);
+  /* Create the triangle */
+  ntriang = 0;
+  for (i = 0; triTable[cubeindex][i] != -1; i += 3) {
+    triangles[ntriang].p[0] = vertlist[triTable[cubeindex][i]];
+    triangles[ntriang].p[1] = vertlist[triTable[cubeindex][i + 1]];
+    triangles[ntriang].p[2] = vertlist[triTable[cubeindex][i + 2]];
+    ntriang++;
+  }
+
+  return (ntriang);
 }
