@@ -59,14 +59,14 @@ int main(int argc, char *argv[]) { // передаем функции аргументы
 	int image_num = 0; //количество снимков
 	XYZ miumiu; // переменная типа структура XYZ
 	XYZ dot[3]; // массив, содержащий три координаты каждой точки
-	
 
-	
+
+
 	for (fs::recursive_directory_iterator it(argv[1]), end; it != end;
 	it++) { // пробегаем циклом по всем файлам дирректории
 			// если первый файл, то
 
-		
+
 		DcmFileFormat fileformat;
 		string name_of_file;
 		name_of_file =
@@ -170,7 +170,7 @@ int main(int argc, char *argv[]) { // передаем функции аргументы
 			}
 			// считывание pixel data, ссылка на пример: http://forum.dcmtk.org/viewtopic.php?f=1&t=4001
 			unsigned long numByte = 0; // количество бит
-			short** pixelData = NULL; // создаем массив pixel data
+			short* pixelData = NULL; // создаем массив pixel data
 			DicomImage* img = new DicomImage(name_of_file.c_str());
 			if (img->getStatus() == EIS_Normal) // проверяем, открылось ли
 			{
@@ -182,18 +182,18 @@ int main(int argc, char *argv[]) { // передаем функции аргументы
 					for (int k = 0; k < rows; k++) {
 						value[k] = new short[columns]; // выделение памяти по массив значений
 					}
-					pixelData = (short**)inter->getData(); // читаем значения в pixel data
+					pixelData = (short*)inter->getData(); // читаем значения в pixel data
 					if (pixelData != NULL)
 					{
-						for (int i_dot = 0; i_dot < rows; i_dot++) 
+						for (unsigned long i_dot = 0, n = 0; i_dot < rows; i_dot++)
 						{
 							for (int j_dot = 0; j_dot < columns; j_dot++) {
 
-								value[i_dot][j_dot] = pixelData[i_dot][j_dot]; // записываем значения в массив value
-								
+								value[i_dot][j_dot] = pixelData[n++]; // записываем значения в массив value
+
 								miumiu.x = i_dot*x_pixelSpacing + x_imagePosition;; // вычисляем x
 								miumiu.y = j_dot*y_pixelSpacing + y_imagePosition;; // вычисляем y
-								miumiu.z = image_num*sliceLocation + z_imagePosition; // вычисляем z
+								miumiu.z = image_num*0.8 + z_imagePosition; // вычисляем z
 								dot[0].coordinates[0] = miumiu.x; // x - первый элемент массива
 								dot[1].coordinates[1] = miumiu.y; // y - второй элемент массива
 								dot[2].coordinates[2] = miumiu.z; // z - третий элемент массива
@@ -205,10 +205,10 @@ int main(int argc, char *argv[]) { // передаем функции аргументы
 							}
 						}
 					}
-					for (int i = 0; i < rows; i++) {
+					for (int i = 0; i < rows; i++) { // удаление динамической памяти
 						delete value[i];
 					}
-					delete[] value;					
+					delete[] value;
 				}
 			}
 			free(pixelData);
@@ -228,8 +228,8 @@ int main(int argc, char *argv[]) { // передаем функции аргументы
 		first_file = false;
 		image_num++;
 	}
-
 }
+
 
 
 double ABS(double a) {
