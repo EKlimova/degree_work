@@ -20,6 +20,7 @@ namespace fs = boost::filesystem;
 // структура должна содержать координаты ячеек 
 struct XYZ {
 	double x, y, z;
+	double coordinates[3];
 };
 
 typedef struct {
@@ -55,8 +56,9 @@ int main(int argc, char *argv[]) { // передаем функции аргументы
 	Uint16 bitsAllocated;
 	Uint16 bitsStored;
 	Uint16 highBit;
-	const Sint16 * pixelData;
 	int image_num = 0; //количество снимков
+	XYZ miumiu; // переменная типа структура XYZ
+	XYZ dot[3]; // массив, содержащий три координаты каждой точки
 	
 
 	
@@ -168,28 +170,45 @@ int main(int argc, char *argv[]) { // передаем функции аргументы
 			}
 			// считывание pixel data, ссылка на пример: http://forum.dcmtk.org/viewtopic.php?f=1&t=4001
 			unsigned long numByte = 0; // количество бит
-			short* pixelData = NULL; // создаем массив pixel data
+			short** pixelData = NULL; // создаем массив pixel data
 			DicomImage* img = new DicomImage(name_of_file.c_str());
 			if (img->getStatus() == EIS_Normal) // проверяем, открылось ли
 			{
-				const DiPixel *inter = img->getInterData(); // 
+				const DiPixel *inter = img->getInterData(); // считываем пиксельные данные
 				if (inter != NULL)
 				{
 					numByte = inter->getCount(); // считаем количество бит
-					short *value = new short[numByte]; // массив значений
-					pixelData = (short*)inter->getData(); // читаем значения в pixel data
+					short **value = new short *[rows]; // выделение памяти под массив указателей
+					for (int k = 0; k < rows; k++) {
+						value[k] = new short[columns]; // выделение памяти по массив значений
+					}
+					pixelData = (short**)inter->getData(); // читаем значения в pixel data
 					if (pixelData != NULL)
 					{
-						for (unsigned long dot = 0; dot < numByte; dot++) // записываем значения в массив value
+						for (int i_dot = 0; i_dot < rows; i_dot++) 
 						{
-							value[dot] = pixelData[dot];
-							XYZ miumiu;
-							miumiu.x = dot*x_pixelSpacing + x_imagePosition;;
-							miumiu.y = dot*y_pixelSpacing + y_imagePosition;;
-							miumiu.z = dot*sliceLocation + z_imagePosition;
+							for (int j_dot = 0; j_dot < columns; j_dot++) {
+
+								value[i_dot][j_dot] = pixelData[i_dot][j_dot]; // записываем значения в массив value
+								
+								miumiu.x = i_dot*x_pixelSpacing + x_imagePosition;; // вычисляем x
+								miumiu.y = j_dot*y_pixelSpacing + y_imagePosition;; // вычисляем y
+								miumiu.z = image_num*sliceLocation + z_imagePosition; // вычисляем z
+								dot[0].coordinates[0] = miumiu.x; // x - первый элемент массива
+								dot[1].coordinates[1] = miumiu.y; // y - второй элемент массива
+								dot[2].coordinates[2] = miumiu.z; // z - третий элемент массива
+								cout << "value[0][0]" << value[0][0] << endl; // проверяем значение первого элемента (надо "-2048")
+								for (int i = 0; i < 3; i++)
+								{
+									cout << "dot[i].coordinates[i]" << dot[i].coordinates[i] << endl; // проверяем, что записалось в качестве координат в массив
+								}
+							}
 						}
 					}
-					delete[] value;
+					for (int i = 0; i < rows; i++) {
+						delete value[i];
+					}
+					delete[] value;					
 				}
 			}
 			free(pixelData);
@@ -250,9 +269,9 @@ will be loaded up with the vertices at most 5 triangular facets.
 0 will be returned if the grid cell is either totally above
 of totally below the isolevel.
 */
-for (int i = 0; i < ((rows - 1)*(columns - 1)*(image_num - 1) - 1); i++) { // цикл, считающий треугольники столько раз, сколько есть вокселей (именно тех, в которых вершины - плотности)
-
-}
+//for (int i = 0; i < ((rows - 1)*(columns - 1)*(image_num - 1) - 1); i++) { // цикл, считающий треугольники столько раз, сколько есть вокселей (именно тех, в которых вершины - плотности)
+//
+//}
 int Polygonise(GRIDCELL grid, int argc, char *argv[], TRIANGLE *triangles)
 {
 	int i, ntriang;
